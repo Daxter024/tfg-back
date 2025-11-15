@@ -1,0 +1,55 @@
+####
+## Move to root directory in the future
+##
+## Change db credentials for production
+####
+
+version: '4'
+
+services:
+  terrain-db:
+    image: postgis/postgis:15-3.5
+    container_name: terrain-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: terrain_db
+      POSTGRES_USER: prueba
+      POSTGRES_PASSWORD: aa
+      POSTGIS_ENABLE_OUTDB_RATERS: 1
+      POSTGIS_GDAL_ENABLED_DRIVERS: ENABLE_ALL
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  terrain-service-dev:
+    build: .
+    container_name: terrain-service-dev
+    ports:
+      - "8082:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - DB_URL=jdbc:postgresql://terrain-db:5432/terrain_db
+      - DB_USER=prueba
+      - DB_PASSWORD=aa
+      - SERVER_PORT=8081
+    depends_on:
+      - terrain-db
+    restart: on-failure
+
+  terrain-service-prod:
+    build: .
+    container_name: terrain-service-prod
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://terrain-db:5432/terrain_db
+      - DB_USER=prueba
+      - DB_PASSWORD=aa
+      - SERVER_PORT=8080
+    depends_on:
+      - terrain-db
+    restart: always
+
+volumes:
+  db_data:
