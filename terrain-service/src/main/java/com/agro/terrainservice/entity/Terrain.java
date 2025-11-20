@@ -8,6 +8,8 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.Generated;
+import org.hibernate.annotations.GenerationTime;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 
@@ -32,18 +34,22 @@ public class Terrain {
     @Column(nullable = false, columnDefinition = "geometry(Polygon, 4326)")
     private Polygon geometry;
 
-    @Column(precision = 12, scale = 2)
+    @Column(insertable = false, updatable = false, precision = 12, scale = 2)
+    @Generated(GenerationTime.ALWAYS)
     private BigDecimal area_m2;
 
-    @Column(precision = 12, scale = 2)
+    @Column(insertable = false, updatable = false, precision = 12, scale = 2)
+    @Generated(GenerationTime.ALWAYS)
     private BigDecimal perimeter_m;
 
-    @Column(columnDefinition = "geometry(Point, 4326)")
+    @Column(insertable = false, updatable = false, columnDefinition = "geometry(Point, 4326)")
+    @Generated(GenerationTime.ALWAYS)
     private Point centroid;
 
     @Column(nullable = false, updatable = false)
-    private Instant createdAt = Instant.now();
+    private Instant created_at = Instant.now();
 
-    private Instant updatedAt;
+    @Column(insertable = false)
+    private Instant updated_at;
 
 }
