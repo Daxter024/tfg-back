@@ -25,13 +25,21 @@ public class TerrainController {
         var response = terrainService.getTerrain(id, fields);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
-    
+
     @PostMapping("/create")
     public ResponseEntity<String> create(
             @RequestBody TerrainRequest dto
     ) {
         String res = terrainService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> delete(
+            @PathVariable UUID id
+    ) {
+        String res = terrainService.delete(id);
+        return ResponseEntity.status(HttpStatus.OK).body(res);
     }
 
 }

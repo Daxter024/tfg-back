@@ -53,4 +53,16 @@ public class TerrainService {
             throw new RuntimeException(i18nService.getMessage("error.geojson"), e);
         }
     }
+
+    @Transactional
+    public String delete(UUID id) {
+        // TODO: En el futuro comprobar si el idUser es el mismo para uqe permita borrarlo
+        boolean exists = terrainRepository.existsById(id);
+        if (!exists) {
+            String notFoundMessage = i18nService.getMessage("terrain.notfound", id);
+            throw new TerrainNotFoundException(notFoundMessage);
+        }
+        terrainRepository.deleteById(id);
+        return i18nService.getMessage("terrain.deleted", id);
+    }
 }
