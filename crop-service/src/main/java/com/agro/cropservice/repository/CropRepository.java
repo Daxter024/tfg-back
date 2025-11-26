@@ -4,6 +4,7 @@ import com.agro.cropservice.dto.CropDetailsDTO;
 import com.agro.cropservice.exception.IntegrityViolationException;
 import com.agro.cropservice.model.Crop;
 import com.agro.cropservice.model.CropType;
+import com.agro.cropservice.service.I18nService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -17,6 +18,7 @@ import java.util.UUID;
 public class CropRepository {
 
     private final JdbcTemplate jdbcTemplate;
+    private final I18nService i18nService;
 
     private final RowMapper<CropType> cropTypeMapper =
             (rs, rowNum) -> new CropType(rs.getInt("id"), rs.getString("name"));
@@ -73,26 +75,28 @@ public class CropRepository {
         return jdbcTemplate.query(sql, cropDetailsMapper);
     }
 
-    public void deleteCropType(Integer cropTypeId) {
-        Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM crop WHERE crop_type_id = ?",
-                Integer.class,
+    public int deleteCropType(Integer cropTypeId) {
+        List<String> cropNames = jdbcTemplate.queryForList(
+                "SELECT name FROM crop WHERE crop_type_id = ?",
+                String.class,
                 cropTypeId
         );
 
-        if (count > 0) {
-            throw new IntegrityViolationException("No se puede eliminar el tipo de cultivo. Existen cultivos asociados.");
+        if (!cropNames.isEmpty()) {
+            String associatedCrops = String.join(",", cropNames);
+            String errorMessage = i18nService.getMessage("crop.integrity.exception", associatedCrops);
+            throw new IntegrityViolationException(errorMessage);
         }
 
-        jdbcTemplate.update("DELETE FROM crop_type WHERE id = ?", cropTypeId);
+        return jdbcTemplate.update("DELETE FROM crop_type WHERE id = ?", cropTypeId);
     }
 
-    public void deleteCrop(UUID id) {
-        // Tener en cuenta si está en un terreno o temporada
-        // Al fin y al cabo el orden de entidades que mandan son:
-        // 1. User
-        // 2. Terrain
-        // 3. Temporada / Tarea
-        // 4. Cultivo -> (hacer cultivo como una entidad ya existente que no puede ser modificada por el usuario)
-    }
+//    public int deleteCrop(UUID id) {
+//        // Tener en cuenta si está en un terreno o temporada
+//        // Al fin y al cabo el orden de entidades que mandan son:
+//        // 1. User
+//        // 2. Terrain
+//        // 3. Temporada / Tarea
+//        // 4. Cultivo -> (hacer cultivo como una entidad ya existente que no puede ser modificada por el usuario)
+//    }
 }
