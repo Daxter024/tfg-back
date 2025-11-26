@@ -18,6 +18,7 @@ services:
     ports:
       - "8083:8083"
     environment:
+      - SPRING_PROFILES_ACTIVE=prod
       - DB_URL=jdbc:postgresql://crop-db:5432/crop_db
       - DB_USER=postgres
       - DB_PASSWORD=postgres
