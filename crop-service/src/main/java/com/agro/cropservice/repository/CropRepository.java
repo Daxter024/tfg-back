@@ -41,9 +41,15 @@ public class CropRepository {
                     rs.getString("crop_type_name")
             );
 
-    public void insertCrop(String name, String description, Integer crop_type_id) {
+    public int insertCrop(String name, String description, Integer crop_type_id) {
         String sql = "INSERT INTO crop (name, description, crop_type_id) VALUES (?, ?, ?)";
-        jdbcTemplate.update(sql, name, description, crop_type_id);
+        return jdbcTemplate.update(sql, name, description, crop_type_id);
+    }
+
+    public boolean cropTypeExists(Integer crop_type_id) {
+        String sql = "SELECT COUNT(*) FROM crop_type WHERE id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, crop_type_id);
+        return (count != null && count > 0);
     }
 
     public void insertCropType(String name) {
