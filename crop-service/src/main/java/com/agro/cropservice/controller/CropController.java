@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/crop")
@@ -39,6 +40,16 @@ public class CropController {
         var response = cropService.createCrop(cropRequest);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
+                .body(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> deleteCrop(
+            @PathVariable UUID id
+    ) {
+        var response = cropService.deleteCrop(id);
+        return ResponseEntity
+                .status(HttpStatus.NO_CONTENT)
                 .body(response);
     }
 }

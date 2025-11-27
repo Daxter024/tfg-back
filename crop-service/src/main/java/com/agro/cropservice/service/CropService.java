@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -45,6 +46,14 @@ public class CropService {
         }
 
         return i18nService.getMessage("crop.not.created");
+    }
+
+    public String deleteCrop(UUID id) {
+        var response = cropRepository.deleteCrop(id);
+        if (response > 0) {
+            return i18nService.getMessage("crop.deleted", id);
+        }
+        return i18nService.getMessage("crop.not.deleted", id);
     }
 
 }

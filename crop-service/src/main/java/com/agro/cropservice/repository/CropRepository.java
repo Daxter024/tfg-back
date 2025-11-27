@@ -52,6 +52,12 @@ public class CropRepository {
         return (count != null && count > 0);
     }
 
+    public boolean cropExists(UUID id) {
+        String sql = "SELECT COUNT(*) FROM crop WHERE id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+        return (count != null && count > 0);
+    }
+
     public void insertCropType(String name) {
         String sql = "INSERT INTO crop_type (name) VALUES (?)";
         jdbcTemplate.update(sql, name);
@@ -103,12 +109,13 @@ public class CropRepository {
         return jdbcTemplate.update("DELETE FROM crop_type WHERE id = ?", cropTypeId);
     }
 
-//    public int deleteCrop(UUID id) {
-//        // Tener en cuenta si está en un terreno o temporada
-//        // Al fin y al cabo el orden de entidades que mandan son:
-//        // 1. User
-//        // 2. Terrain
-//        // 3. Temporada / Tarea
-//        // 4. Cultivo -> (hacer cultivo como una entidad ya existente que no puede ser modificada por el usuario)
-//    }
+    public int deleteCrop(UUID id) {
+        Boolean exists = cropExists(id);
+        if (!exists) {
+            throw new IllegalArgumentException("crop not found");
+        }
+
+        String sql = "DELETE FROM crop WHERE id = ?";
+        return jdbcTemplate.update(sql, id);
+    }
 }
