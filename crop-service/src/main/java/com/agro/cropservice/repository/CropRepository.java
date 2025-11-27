@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Repository
@@ -53,6 +54,11 @@ public class CropRepository {
     public List<Crop> findAllCrops() {
         String sql = "SELECT * FROM crop";
         return jdbcTemplate.query(sql, cropMapper);
+    }
+
+    public List<Map<String, Object>> findAllCrops(String fields) {
+        String sql = "SELECT " + fields + " FROM crop";
+        return jdbcTemplate.queryForList(sql);
     }
 
     public List<CropType> findAllCropTypes() {

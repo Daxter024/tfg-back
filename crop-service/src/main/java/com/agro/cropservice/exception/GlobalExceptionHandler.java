@@ -18,4 +18,14 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(problemDetail);
     }
+
+    @ExceptionHandler(InvalidFieldException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidFieldException(InvalidFieldException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Campos invalido");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
 }
