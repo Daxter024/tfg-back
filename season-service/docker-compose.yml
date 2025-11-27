@@ -1,0 +1,30 @@
+version: '4'
+services:
+  season-db:
+    image: postgres:14
+    container_name: season-db
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: season_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_season_data:/var/lib/postgresql/data
+
+  season-service:
+    build: .
+    container_name: season-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://season-db:5432/season_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - SERVER_PORT=8084
+    depends_on:
+      - season-db
+
+volumes:
+  db_season_data:
