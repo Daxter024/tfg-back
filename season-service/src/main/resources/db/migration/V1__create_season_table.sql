@@ -14,8 +14,8 @@ INSERT INTO season_type (name) VALUES
 
 CREATE table season (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_terrain UUID NOT NULL,
-    id_crop UUID NOT NULL,
+    terrain_id UUID NOT NULL,
+    crop_id UUID NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE,
     season_type_id INTEGER REFERENCES season_type(id),
