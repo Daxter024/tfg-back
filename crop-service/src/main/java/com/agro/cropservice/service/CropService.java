@@ -7,6 +7,7 @@ import com.agro.cropservice.repository.CropRepository;
 import com.agro.cropservice.utils.FieldsValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,15 +19,18 @@ public class CropService {
     private final FieldsValidator fieldsValidator = new FieldsValidator(CropFieldConstants.ALLOWED_FIELDS);
     private final I18nService i18nService;
 
+    @Transactional(readOnly = true)
     public List<?> getCrops(String fields) {
         String selectedFields = fieldsValidator.validateAndProcess(fields);
         return cropRepository.findAllCrops(selectedFields);
     }
 
+    @Transactional(readOnly = true)
     public List<CropType> getCropTypes() {
         return cropRepository.findAllCropTypes();
     }
 
+    @Transactional
     public String createCrop(CropRequest cropRequest) {
 
         boolean existsCropType = cropRepository.cropTypeExists(cropRequest.crop_type_id());
@@ -48,6 +52,7 @@ public class CropService {
         return i18nService.getMessage("crop.not.created");
     }
 
+    @Transactional
     public String deleteCrop(UUID id) {
         var response = cropRepository.deleteCrop(id);
         if (response > 0) {
