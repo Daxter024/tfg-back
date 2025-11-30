@@ -1,6 +1,6 @@
 package com.agro.seasonservice.service;
 
-import com.agro.seasonservice.constants.SeasonConstants;
+import com.agro.seasonservice.constants.SeasonField;
 import com.agro.seasonservice.dto.SeasonRequest;
 import com.agro.seasonservice.repository.SeasonRepository;
 import com.agro.seasonservice.utils.FieldsValidator;
@@ -16,23 +16,23 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SeasonService {
 
-    private final FieldsValidator fieldsValidator = new FieldsValidator(SeasonConstants.SEASON_ALLOWED_FIELDS);
     private final SeasonRepository seasonRepository;
+    private final FieldsValidator fieldsValidator;
 
     @Transactional(readOnly = true)
-    public Object getSeason(UUID id, String fields) {
-        String selectedFields = fieldsValidator.validateAndProcess(fields);
+    public Object getSeason(UUID id, List<SeasonField> fields) {
+        String selectedFields = fieldsValidator.formatFieldList(fields);
         return seasonRepository.getSeason(id, selectedFields);
     }
 
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> getSeasonsByTerrain(UUID terrainId, String fields) {
-        String selectedFields = fieldsValidator.validateAndProcess(fields);
+    public List<Map<String, Object>> getSeasonsByTerrain(UUID terrainId, List<SeasonField> fields) {
+        String selectedFields = fieldsValidator.formatFieldList(fields);
         return seasonRepository.getSeasonsByTerrain(terrainId, selectedFields);
     }
 
     @Transactional
-    public Map<String, Object> createSeason(SeasonRequest request) {
+    public UUID createSeason(SeasonRequest request) {
         return seasonRepository.createSeason(request);
     }
 

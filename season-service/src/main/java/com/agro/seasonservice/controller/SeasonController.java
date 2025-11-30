@@ -1,5 +1,6 @@
 package com.agro.seasonservice.controller;
 
+import com.agro.seasonservice.constants.SeasonField;
 import com.agro.seasonservice.dto.SeasonRequest;
 import com.agro.seasonservice.service.SeasonService;
 import jakarta.validation.Valid;
@@ -8,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -20,7 +22,7 @@ public class SeasonController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getSeason(
             @PathVariable UUID id,
-            @RequestParam(required = false) String fields
+            @RequestParam(required = false) List<SeasonField> fields
     ) {
         var response = seasonService.getSeason(id, fields);
         return ResponseEntity
@@ -31,7 +33,7 @@ public class SeasonController {
     @GetMapping("/terrain/{terrainId}")
     public ResponseEntity<?> getSeasonsByTerrain(
             @PathVariable UUID terrainId,
-            @RequestParam(required = false) String fields
+            @RequestParam(required = false) List<SeasonField> fields
     ) {
         var response = seasonService.getSeasonsByTerrain(terrainId, fields);
         return ResponseEntity.ok(response);
