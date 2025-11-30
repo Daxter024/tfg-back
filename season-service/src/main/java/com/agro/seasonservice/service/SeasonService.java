@@ -1,12 +1,15 @@
 package com.agro.seasonservice.service;
 
 import com.agro.seasonservice.constants.SeasonConstants;
+import com.agro.seasonservice.dto.SeasonRequest;
 import com.agro.seasonservice.repository.SeasonRepository;
 import com.agro.seasonservice.utils.FieldsValidator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -20,5 +23,21 @@ public class SeasonService {
     public Object getSeason(UUID id, String fields) {
         String selectedFields = fieldsValidator.validateAndProcess(fields);
         return seasonRepository.getSeason(id, selectedFields);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getSeasonsByTerrain(UUID terrainId, String fields) {
+        String selectedFields = fieldsValidator.validateAndProcess(fields);
+        return seasonRepository.getSeasonsByTerrain(terrainId, selectedFields);
+    }
+
+    @Transactional
+    public Map<String, Object> createSeason(SeasonRequest request) {
+        return seasonRepository.createSeason(request);
+    }
+
+    @Transactional
+    public void deleteSeason(UUID id) {
+        seasonRepository.deleteSeason(id);
     }
 }

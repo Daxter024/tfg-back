@@ -1,6 +1,8 @@
 package com.agro.seasonservice.controller;
 
+import com.agro.seasonservice.dto.SeasonRequest;
 import com.agro.seasonservice.service.SeasonService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,4 +28,28 @@ public class SeasonController {
                 .body(response);
     }
 
+    @GetMapping("/terrain/{terrainId}")
+    public ResponseEntity<?> getSeasonsByTerrain(
+            @PathVariable UUID terrainId,
+            @RequestParam(required = false) String fields
+    ) {
+        var response = seasonService.getSeasonsByTerrain(terrainId, fields);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createSeason(
+            @Valid @RequestBody SeasonRequest request
+    ) {
+        var response = seasonService.createSeason(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteSeason(
+            @PathVariable UUID id
+    ) {
+        seasonService.deleteSeason(id);
+        return ResponseEntity.noContent().build();
+    }
 }
