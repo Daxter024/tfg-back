@@ -1,0 +1,8 @@
+services:
+  api-gateway:
+    build: .
+    container_name: api-gateway
+    ports:
+      - "9000:9000"
+    environment:
+      - SERVER_PORT=9000
