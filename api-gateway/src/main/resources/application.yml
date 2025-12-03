@@ -16,6 +16,28 @@ spring:
                 name: seasonService
                 fallbackUri: forward:/fallback/season
                 statusCodes: 500,502,503,504,505
+        - id: crop-service
+          uri: ${CROP_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/api/crop/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: cropService
+                fallbackUri: forward:/fallback/crop
+                statusCodes: 500,502,503,504,505
+        - id: terrain-service
+          uri: ${TERRAIN_SERVICE_URL:http://localhost:8083}
+          predicates:
+            - Path=/api/terrain/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: terrainService
+                fallbackUri: forward:/fallback/terrain
+                statusCodes: 500,502,503,504,505
 # For newer versions
 #  cloud:
 #    gateway:
