@@ -65,4 +65,4 @@ management:
         include: gateway, health, info
 
 server:
-  port: ${SERVER_PORT:9000}
+  port: ${SERVER_PORT:9001}
