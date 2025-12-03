@@ -11,6 +11,11 @@ spring:
             - Path=/api/season/**
           filters:
             - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: seasonService
+                fallbackUri: forward:/fallback/season
+                statusCodes: 500,502,503,504,505
 # For newer versions
 #  cloud:
 #    gateway:
