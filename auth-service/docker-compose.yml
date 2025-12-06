@@ -22,6 +22,7 @@ services:
       DB_USER: postgres
       DB_PASSWORD: postgres
       SERVER_PORT: 8083
+      SPRING_PROFILES_ACTIVE: prod # Spring automaticamente elige el perfil prod
     depends_on:
       - auth-db
 
