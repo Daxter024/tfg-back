@@ -12,22 +12,27 @@ import java.util.Map;
 @RestController
 @RequestMapping("/fallback")
 public class FallbackController {
-    
+
     @RequestMapping("/season")
     public Mono<ResponseEntity<Map<String, Object>>> seasonFallback() {
         return createFallbackResponse("season", "season-service");
     }
-    
+
     @RequestMapping("/crop")
     public Mono<ResponseEntity<Map<String, Object>>> cropFallback() {
         return createFallbackResponse("crop", "crop-service");
     }
-    
+
     @RequestMapping("/terrain")
     public Mono<ResponseEntity<Map<String, Object>>> terrainFallback() {
         return createFallbackResponse("terrain", "terrain-service");
     }
-    
+
+    @RequestMapping("/auth")
+    public Mono<ResponseEntity<Map<String, Object>>> authFallback() {
+        return createFallbackResponse("auth", "auth-service");
+    }
+
     private Mono<ResponseEntity<Map<String, Object>>> createFallbackResponse(String serviceName, String headerServiceName) {
         Map<String, Object> response = Map.of(
                 "status", "SERVICE_UNAVAILABLE",
