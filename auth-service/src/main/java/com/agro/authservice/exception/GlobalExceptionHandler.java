@@ -30,5 +30,24 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(problemDetail);
     }
-    
+
+    @ExceptionHandler(EmailNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleEmailNotFoundException(EmailNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Email not found");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidCredentialsException(InvalidCredentialsException ex) {
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Invalid credentials");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
 }

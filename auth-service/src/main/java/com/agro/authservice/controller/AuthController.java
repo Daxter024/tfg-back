@@ -10,8 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
-
 @RestController
 @Validated
 public class AuthController {
@@ -28,13 +26,7 @@ public class AuthController {
             @RequestBody
             @Valid LoginRequestDTO loginRequest
     ) {
-        Optional<String> tokenOptional = authService.authenticate(loginRequest);
-
-        if (tokenOptional.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        }
-
-        String token = tokenOptional.get();
+        String token = authService.authenticate(loginRequest);
         return ResponseEntity.ok(new LoginResponseDTO(token));
     }
 

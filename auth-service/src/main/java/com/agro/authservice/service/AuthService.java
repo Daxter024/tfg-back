@@ -1,12 +1,13 @@
 package com.agro.authservice.service;
 
 import com.agro.authservice.dto.LoginRequestDTO;
+import com.agro.authservice.exception.EmailNotFoundException;
+import com.agro.authservice.exception.InvalidCredentialsException;
+import com.agro.authservice.model.User;
 import com.agro.authservice.util.JwtUtil;
 import io.jsonwebtoken.JwtException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.Optional;
 
 @Service
 public class AuthService {
@@ -23,14 +24,18 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
-    public Optional<String> authenticate(LoginRequestDTO loginRequest) {
-        Optional<String> token = userService.findByEmail(loginRequest.email())
-                .filter(u -> passwordEncoder.matches(loginRequest.password(),
-                        u.getPassword()))
-                .map(u -> jwtUtil.generateToken(
-                        u.getEmail(),
-                        roleService.getRoleName(u.getRole_id())
-                ));
+    public String authenticate(LoginRequestDTO loginRequest) {
+        User user = userService.findByEmail(loginRequest.email())
+                .orElseThrow(() -> new EmailNotFoundException("Email not found"));
+
+        if (!passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
+            throw new InvalidCredentialsException("Email or password are incorrect");
+        }
+
+        String token = jwtUtil.generateToken(
+                user.getEmail(),
+                roleService.getRoleName(user.getRole_id())
+        );
 
         return token;
     }
