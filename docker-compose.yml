@@ -9,10 +9,12 @@ services:
       - TERRAIN_SERVICE_URL=http://terrain-service:8080
       - CROP_SERVICE_URL=http://crop-service:8081
       - SEASON_SERVICE_URL=http://season-service:8082
+      - AUTH_SERVICE_URL=http://auth-service:8083
     depends_on:
       - terrain-service
       - crop-service
       - season-service
+      - auth-service
 
   terrain-db:
     image: postgis/postgis:15-3.5
@@ -93,7 +95,35 @@ services:
     depends_on:
       - season-db
 
+  auth-db:
+    image: postgres:14
+    container_name: auth-db
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_auth_data:/var/lib/postgresql/data
+
+  auth-service:
+    build: ./auth-service
+    container_name: auth-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - DB_URL=jdbc:postgresql://auth-db:5432/auth_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - SERVER_PORT=8083
+      - JWT_SECRET=CambiarEnElFuturoEstaCl4veNoesParaProduccion219834
+    depends_on:
+      - auth-db
+
 volumes:
   db_terrain_data:
   db_crop_data:
   db_season_data:
+  db_auth_data:
