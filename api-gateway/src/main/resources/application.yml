@@ -1,6 +1,10 @@
 server:
   port: ${SERVER_PORT:9001}
 
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8085}
+
 spring:
   application:
     name: api-gateway
@@ -16,16 +20,17 @@ spring:
             - StripPrefix=1
             - name: CircuitBreaker
               args:
-                name: seasonService
+                name: authService
                 fallbackUri: forward:/fallback/auth
                 statusCodes: 500,502,503,504,505
 
         - id: season-service
-          uri: ${SEASON_SERVICE_URL:http://localhost:8084}
+          uri: ${SEASON_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/season/**
           filters:
             - StripPrefix=1
+            - JwtValidation
             - name: CircuitBreaker
               args:
                 name: seasonService
