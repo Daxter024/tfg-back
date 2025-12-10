@@ -1,5 +1,6 @@
 package com.agro.authservice.exception;
 
+import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -46,6 +47,16 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.UNAUTHORIZED;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
         problemDetail.setTitle("Invalid credentials");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ProblemDetail> handleJwtException(JwtException ex) {
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Invalid token");
         return ResponseEntity
                 .status(status)
                 .body(problemDetail);

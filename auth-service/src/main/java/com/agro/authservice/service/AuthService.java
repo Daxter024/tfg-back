@@ -5,7 +5,6 @@ import com.agro.authservice.exception.EmailNotFoundException;
 import com.agro.authservice.exception.InvalidCredentialsException;
 import com.agro.authservice.model.User;
 import com.agro.authservice.util.JwtUtil;
-import io.jsonwebtoken.JwtException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -41,11 +40,7 @@ public class AuthService {
     }
 
     public boolean validateToken(String token) {
-        try {
-            jwtUtil.validateToken(token);
-            return true;
-        } catch (JwtException e) {
-            return false;
-        }
+        jwtUtil.validateToken(token);
+        return true;
     }
 }
