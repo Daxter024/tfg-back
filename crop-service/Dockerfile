@@ -1,7 +1,17 @@
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:21-jdk-alpine AS build
+WORKDIR /app
 
-ARG JAR_FILE=target/crop-service-0.0.1-SNAPSHOT.jar
+# Copiamos el código fuente
+COPY . .
 
-COPY ${JAR_FILE} app.jar
+# Construimos el jar
+RUN ./mvnw -q -e -DskipTests clean package
 
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+# ---------- RUN STAGE ----------
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+
+# Copiamos el jar generado desde el stage anterior
+COPY --from=build /app/target/crop-service-0.0.1-SNAPSHOT.jar app.jar
+
+ENTRYPOINT ["java", "-jar", "app.jar"]
