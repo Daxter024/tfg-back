@@ -15,26 +15,28 @@ public class AuthService {
     private final RoleService roleService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final I18nService i18nService;
 
-    public AuthService(UserService userService, RoleService roleService, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public AuthService(UserService userService, RoleService roleService, PasswordEncoder passwordEncoder,
+            JwtUtil jwtUtil, I18nService i18nService) {
         this.userService = userService;
         this.roleService = roleService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.i18nService = i18nService;
     }
 
     public String authenticate(LoginRequestDTO loginRequest) {
         User user = userService.findByEmail(loginRequest.email())
-                .orElseThrow(() -> new EmailNotFoundException("Email not found"));
+                .orElseThrow(() -> new EmailNotFoundException(i18nService.getMessage("auth.email.not.found")));
 
         if (!passwordEncoder.matches(loginRequest.password(), user.getPassword())) {
-            throw new InvalidCredentialsException("Email or password are incorrect");
+            throw new InvalidCredentialsException(i18nService.getMessage("auth.invalid.credentials"));
         }
 
         String token = jwtUtil.generateToken(
                 user.getEmail(),
-                roleService.getRoleName(user.getRole_id())
-        );
+                roleService.getRoleName(user.getRole_id()));
 
         return token;
     }

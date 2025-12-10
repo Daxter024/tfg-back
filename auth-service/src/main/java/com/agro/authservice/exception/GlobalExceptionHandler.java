@@ -1,5 +1,6 @@
 package com.agro.authservice.exception;
 
+import com.agro.authservice.service.I18nService;
 import io.jsonwebtoken.JwtException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -14,6 +15,12 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    private final I18nService i18nService;
+
+    public GlobalExceptionHandler(I18nService i18nService) {
+        this.i18nService = i18nService;
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
@@ -21,11 +28,16 @@ public class GlobalExceptionHandler {
         List<String> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(error -> error.getField() + ": " + error.getDefaultMessage())
+                .map(error -> {
+                    String defaultMessage = error.getDefaultMessage();
+                    String messageKey = defaultMessage.replaceAll("[{}]", "");
+                    String resolvedMessage = i18nService.getMessage(messageKey);
+                    return error.getField() + ": " + resolvedMessage;
+                })
                 .collect(Collectors.toList());
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(status);
-        problemDetail.setTitle("Campos invalido");
+        problemDetail.setTitle(i18nService.getMessage("auth.validation.error.title"));
         problemDetail.setProperty("errors", errors);
         return ResponseEntity
                 .status(status)
@@ -36,7 +48,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleEmailNotFoundException(EmailNotFoundException ex) {
         HttpStatus status = HttpStatus.NOT_FOUND;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
-        problemDetail.setTitle("Email not found");
+        problemDetail.setTitle(i18nService.getMessage("auth.email.not.found.title"));
         return ResponseEntity
                 .status(status)
                 .body(problemDetail);
@@ -46,7 +58,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleInvalidCredentialsException(InvalidCredentialsException ex) {
         HttpStatus status = HttpStatus.UNAUTHORIZED;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
-        problemDetail.setTitle("Invalid credentials");
+        problemDetail.setTitle(i18nService.getMessage("auth.invalid.credentials.title"));
         return ResponseEntity
                 .status(status)
                 .body(problemDetail);
@@ -56,7 +68,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ProblemDetail> handleJwtException(JwtException ex) {
         HttpStatus status = HttpStatus.UNAUTHORIZED;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
-        problemDetail.setTitle("Invalid token");
+        problemDetail.setTitle(i18nService.getMessage("auth.invalid.token.title"));
         return ResponseEntity
                 .status(status)
                 .body(problemDetail);
