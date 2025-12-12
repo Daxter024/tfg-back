@@ -1,19 +1,28 @@
 package com.agro.terrainservice.exception;
 
+import com.agro.terrainservice.service.I18nService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestControllerAdvice
+@RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    private final I18nService i18nService;
 
     @ExceptionHandler(TerrainNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleTerrainNotFoundException(TerrainNotFoundException ex) {
 
         // Se usa el ProblemDetail pq sigue el RFC 7807
-        
+
         HttpStatus status = HttpStatus.NOT_FOUND;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
         problemDetail.setTitle("Terrain not found");
@@ -21,6 +30,27 @@ public class GlobalExceptionHandler {
         // problemDetail.setProperty("timestamp", Instant.now());
         // Irrelevante puesto que en la cabecera ya se incluye el timestamp
 
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ProblemDetail> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        List<String> errors = ex.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(error -> {
+                    String resolvedMessage = error.getDefaultMessage();
+                    return error.getField() + ": " + resolvedMessage;
+                })
+                .collect(Collectors.toList());
+
+        ProblemDetail problemDetail = ProblemDetail.forStatus(status);
+        problemDetail.setTitle("Wrong payload");
+        problemDetail.setProperty("errors", errors);
         return ResponseEntity
                 .status(status)
                 .body(problemDetail);

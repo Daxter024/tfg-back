@@ -25,6 +25,6 @@ public interface TerrainRepository extends JpaRepository<Terrain, UUID> {
             """, nativeQuery = true)
     void saveWithCalculations(
             @Param("name") String name,
-            @Param("userId") UUID user_id,
+            @Param("user_id") UUID user_id,
             @Param("geoJson") String geoJson);
 }

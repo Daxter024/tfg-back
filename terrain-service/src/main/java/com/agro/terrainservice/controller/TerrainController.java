@@ -2,6 +2,7 @@ package com.agro.terrainservice.controller;
 
 import com.agro.terrainservice.dto.TerrainRequest;
 import com.agro.terrainservice.service.TerrainService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +27,9 @@ public class TerrainController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PostMapping()
+    @PostMapping
     public ResponseEntity<String> create(
-            @RequestBody TerrainRequest dto
+            @Valid @RequestBody TerrainRequest dto
     ) {
         String res = terrainService.create(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(res);

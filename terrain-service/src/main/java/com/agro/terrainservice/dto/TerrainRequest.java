@@ -1,6 +1,11 @@
 package com.agro.terrainservice.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * De momento se queda así porque no es necesario hacer operaciones desde java
@@ -9,7 +14,8 @@ import java.util.Map;
  */
 
 public record TerrainRequest(
-        String name,
-        java.util.UUID user_id,
-        Map<String, Object> geometry) {
+        @NotBlank(message = "{terrain.name.required}") String name,
+        @NotNull(message = "{terrain.user_id.required}") UUID user_id,
+        @NotEmpty(message = "{terrain.geometry.required}") Map<String, Object> geometry
+) {
 }
