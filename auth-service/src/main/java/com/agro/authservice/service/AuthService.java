@@ -7,6 +7,7 @@ import com.agro.authservice.model.User;
 import com.agro.authservice.util.JwtUtil;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -18,7 +19,7 @@ public class AuthService {
     private final I18nService i18nService;
 
     public AuthService(UserService userService, RoleService roleService, PasswordEncoder passwordEncoder,
-            JwtUtil jwtUtil, I18nService i18nService) {
+                       JwtUtil jwtUtil, I18nService i18nService) {
         this.userService = userService;
         this.roleService = roleService;
         this.passwordEncoder = passwordEncoder;
@@ -26,6 +27,8 @@ public class AuthService {
         this.i18nService = i18nService;
     }
 
+    // Aunque sea POST no está modificando nada en la bbdd solo lee datos
+    @Transactional(readOnly = true)
     public String authenticate(LoginRequestDTO loginRequest) {
         User user = userService.findByEmail(loginRequest.email())
                 .orElseThrow(() -> new EmailNotFoundException(i18nService.getMessage("auth.email.not.found")));
@@ -41,6 +44,7 @@ public class AuthService {
         return token;
     }
 
+    @Transactional(readOnly = true)
     public boolean validateToken(String token) {
         jwtUtil.validateToken(token);
         return true;

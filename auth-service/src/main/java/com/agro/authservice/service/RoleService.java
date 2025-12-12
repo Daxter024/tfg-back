@@ -3,6 +3,7 @@ package com.agro.authservice.service;
 import com.agro.authservice.model.Role;
 import com.agro.authservice.repository.RoleRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -19,6 +20,7 @@ public class RoleService {
      * Lo utilizo solo para el nombre, aunque no es una buena práctica, cambiar la lógica
      * para que solo se use en JwtUtil para que si es null de el valor "user" allí
      */
+    @Transactional(readOnly = true)
     public String getRoleName(Integer roleId) {
         Optional<String> roleName = roleRepository.findById(roleId)
                 .map(Role::getName);
