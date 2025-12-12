@@ -9,11 +9,12 @@ import java.util.UUID;
 @JsonFilter("terrainFilter")
 public record TerrainResponseDTO(
         UUID id,
+        UUID user_id,
         String name,
-        String geometry,    // Polygon casted to String
+        String geometry, // Polygon casted to String
         BigDecimal area_m2,
         BigDecimal perimeter_m,
-        String centroid,    // Point casted to String
+        String centroid, // Point casted to String
         Instant created_at,
         Instant updated_at
 ) {

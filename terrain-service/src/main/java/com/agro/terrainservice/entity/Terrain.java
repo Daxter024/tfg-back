@@ -31,6 +31,9 @@ public class Terrain {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "user_id", nullable = false)
+    private UUID user_id;
+
     @Column(nullable = false, columnDefinition = "geometry(Polygon, 4326)")
     private Polygon geometry;
 

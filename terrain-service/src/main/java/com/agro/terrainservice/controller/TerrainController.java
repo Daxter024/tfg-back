@@ -26,7 +26,7 @@ public class TerrainController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PostMapping("/create")
+    @PostMapping()
     public ResponseEntity<String> create(
             @RequestBody TerrainRequest dto
     ) {

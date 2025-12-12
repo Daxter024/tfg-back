@@ -25,6 +25,7 @@ public class TerrainService {
     private final TerrainMapper terrainMapper;
     private final FieldFilter fieldFilter = new FieldFilter();
 
+    @Transactional(readOnly = true)
     public MappingJacksonValue getTerrain(UUID id, String fields) {
 
         String notFoundMsg = i18nService.getMessage("terrain.notfound", id);
@@ -47,7 +48,7 @@ public class TerrainService {
     public String create(TerrainRequest dto) {
         try {
             String geoJson = mapper.writeValueAsString(dto.geometry());
-            terrainRepository.saveWithCalculations(dto.name(), geoJson);
+            terrainRepository.saveWithCalculations(dto.name(), dto.user_id(), geoJson);
             return i18nService.getMessage("terrain.created", dto.name());
         } catch (Exception e) {
             throw new RuntimeException(i18nService.getMessage("error.geojson"), e);
@@ -56,7 +57,8 @@ public class TerrainService {
 
     @Transactional
     public String delete(UUID id) {
-        // TODO: En el futuro comprobar si el idUser es el mismo para uqe permita borrarlo
+        // TODO: En el futuro comprobar si el idUser es el mismo para uqe permita
+        // borrarlo
         boolean exists = terrainRepository.existsById(id);
         if (!exists) {
             String notFoundMessage = i18nService.getMessage("terrain.notfound", id);
