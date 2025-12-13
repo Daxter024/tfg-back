@@ -1,30 +1,72 @@
 package com.agro.terrainservice.repository;
 
-import com.agro.terrainservice.entity.Terrain;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import com.agro.terrainservice.exception.TerrainNotFoundException;
+import com.agro.terrainservice.service.I18nService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
 
+import java.util.Map;
 import java.util.UUID;
 
-public interface TerrainRepository extends JpaRepository<Terrain, UUID> {
+@Repository
+@RequiredArgsConstructor
+public class TerrainRepository {
 
-    @Modifying
-    @Query(value = """
-            INSERT INTO terrain(
-                name,
-                user_id,
-                geometry
-            )
-            VALUES (
-                :name,
-                :user_id,
-                ST_SetSRID(ST_GeomFromGeoJSON(:geoJson), 4326)
-            )
-            """, nativeQuery = true)
-    void saveWithCalculations(
-            @Param("name") String name,
-            @Param("user_id") UUID user_id,
-            @Param("geoJson") String geoJson);
+    private final JdbcTemplate jdbcTemplate;
+    private final I18nService i18nService;
+
+    public Map<String, Object> getTerrain(UUID id, String fields) {
+
+        String sql = "SELECT " + fields + " FROM terrain WHERE id = ?";
+        try {
+            return jdbcTemplate.queryForMap(sql, id);
+        } catch (EmptyResultDataAccessException e) {
+            throw new TerrainNotFoundException(
+                    i18nService.getMessage("terrain.notfound", id)
+            );
+        }
+    }
+
+    public void saveWithCalculations(String name, UUID user_id, String geoJson) {
+        String sql = """
+                INSERT INTO terrain (
+                name, user_id, geometry
+                )
+                VALUES (
+                    ?,
+                    ?,
+                    ST_SetSRID(ST_GeomFromGeoJSON(?), 4326)
+                )
+                """;
+
+        jdbcTemplate.update(sql, name, user_id, geoJson);
+    }
+
+    public void deleteTerrain(UUID id, UUID user_id) {
+        String sql = "DELETE FROM terrain WHERE id = ? AND user_id = ?";
+        int rows = jdbcTemplate.update(sql, id, user_id);
+        if (rows == 0) {
+            throw new TerrainNotFoundException(
+                    i18nService.getMessage("terrain.notfound", id)
+            );
+        }
+    }
+
+
+//    @Override
+//    public Object getTerrainByFields(UUID id, String selectedFields) {
+//        String sql = String.format(
+//                "SELECT %s FROM terrain WHERE id = %s",
+//                selectedFields,
+//                id
+//        );
+//
+//        try {
+//            return em.createNativeQuery(sql).getSingleResult();
+//        } catch (NoResultException e) {
+//            return null;
+//        }
+//    }
 }

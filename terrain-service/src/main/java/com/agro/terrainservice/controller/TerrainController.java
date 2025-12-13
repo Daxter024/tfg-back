@@ -1,14 +1,15 @@
 package com.agro.terrainservice.controller;
 
+import com.agro.terrainservice.constants.TerrainFields;
 import com.agro.terrainservice.dto.TerrainRequest;
 import com.agro.terrainservice.service.TerrainService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -18,13 +19,22 @@ public class TerrainController {
 
     private final TerrainService terrainService;
 
+//    @GetMapping("/{id}")
+//    public ResponseEntity<MappingJacksonValue> getTerrain(
+//            @PathVariable UUID id,
+//            @RequestParam(required = false) String fields
+//    ) {
+//        var response = terrainService.getTerrain(id, fields);
+//        return new ResponseEntity<>(response, HttpStatus.OK);
+//    }
+
     @GetMapping("/{id}")
-    public ResponseEntity<MappingJacksonValue> getTerrain(
+    public ResponseEntity<?> getTerrain(
             @PathVariable UUID id,
-            @RequestParam(required = false) String fields
+            @RequestParam(required = false) List<TerrainFields> fields
     ) {
         var response = terrainService.getTerrain(id, fields);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
@@ -37,9 +47,10 @@ public class TerrainController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> delete(
-            @PathVariable UUID id
+            @PathVariable UUID id,
+            @RequestParam(required = true) UUID user_id
     ) {
-        String res = terrainService.delete(id);
+        String res = terrainService.delete(id, user_id);
         return ResponseEntity.status(HttpStatus.OK).body(res);
     }
 
