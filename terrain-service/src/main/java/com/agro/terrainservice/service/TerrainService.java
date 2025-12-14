@@ -1,5 +1,6 @@
 package com.agro.terrainservice.service;
 
+import com.agro.terrainservice.client.UserGrpcClient;
 import com.agro.terrainservice.constants.TerrainFields;
 import com.agro.terrainservice.dto.TerrainRequest;
 import com.agro.terrainservice.repository.TerrainRepository;
@@ -20,6 +21,7 @@ public class TerrainService {
     private final I18nService i18nService;
     private final ObjectMapper mapper;
     private final FieldsValidator fieldsValidator;
+    private final UserGrpcClient userGrpcClient;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getTerrain(UUID id, List<TerrainFields> fields) {
@@ -29,6 +31,11 @@ public class TerrainService {
 
     @Transactional
     public String create(TerrainRequest dto) {
+        if (!userGrpcClient.validateUser(dto.user_id())) {
+            // I am throwing a RuntimeException cause i dont want the client/user to know the logic behind that
+            // I should write a Log Slf4j to let know what is really happening
+            throw new RuntimeException(i18nService.getMessage("user.notfound", dto.user_id()));
+        }
         try {
             String geoJson = mapper.writeValueAsString(dto.geometry());
             terrainRepository.saveWithCalculations(dto.name(), dto.user_id(), geoJson);
