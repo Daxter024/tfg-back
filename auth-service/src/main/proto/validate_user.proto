@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "user";
+
+service UserValidationService {
+  rpc ValidateUser (UserValidationRequest) returns (UserValidationResponse) {}
+}
+
+message UserValidationRequest {
+  string userId = 1;
+}
+
+message UserValidationResponse {
+  bool exists = 1;
+}

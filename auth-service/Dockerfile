@@ -1,5 +1,5 @@
 # ---------- BUILD STAGE ----------
-FROM eclipse-temurin:21-jdk-alpine AS build
+FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /app
 COPY . .
 RUN ./mvnw -q -e -DskipTests clean package
