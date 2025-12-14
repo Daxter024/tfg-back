@@ -19,15 +19,6 @@ public class TerrainController {
 
     private final TerrainService terrainService;
 
-//    @GetMapping("/{id}")
-//    public ResponseEntity<MappingJacksonValue> getTerrain(
-//            @PathVariable UUID id,
-//            @RequestParam(required = false) String fields
-//    ) {
-//        var response = terrainService.getTerrain(id, fields);
-//        return new ResponseEntity<>(response, HttpStatus.OK);
-//    }
-
     @GetMapping("/{id}")
     public ResponseEntity<?> getTerrain(
             @PathVariable UUID id,
