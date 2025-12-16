@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package com.agro.terrain.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.agro.terrain.grpc";
+
+service TerrainService {
+  rpc CheckTerrainExists (TerrainIdRequest) returns (TerrainExistsResponse);
+}
+
+message TerrainIdRequest {
+  string terrain_id = 1;
+}
+
+message TerrainExistsResponse {
+  bool exists = 1;
+}
