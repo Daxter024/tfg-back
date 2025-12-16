@@ -7,6 +7,7 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,6 +28,11 @@ public class TerrainRepository {
                     i18nService.getMessage("terrain.notfound", id)
             );
         }
+    }
+
+    public List<Map<String, Object>> getTerrains(UUID user_id, String fields) {
+        String sql = "SELECT " + fields + " FROM terrain WHERE user_id = ?";
+        return jdbcTemplate.queryForList(sql, user_id);
     }
 
     public void saveWithCalculations(String name, UUID user_id, String geoJson) {
@@ -53,20 +59,4 @@ public class TerrainRepository {
             );
         }
     }
-
-
-//    @Override
-//    public Object getTerrainByFields(UUID id, String selectedFields) {
-//        String sql = String.format(
-//                "SELECT %s FROM terrain WHERE id = %s",
-//                selectedFields,
-//                id
-//        );
-//
-//        try {
-//            return em.createNativeQuery(sql).getSingleResult();
-//        } catch (NoResultException e) {
-//            return null;
-//        }
-//    }
 }

@@ -29,9 +29,16 @@ public class TerrainService {
         return terrainRepository.getTerrain(id, selectedFields);
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getTerrains(UUID user_id, List<TerrainFields> fields) {
+        String selectedFields = fieldsValidator.formatFieldList(fields);
+        return terrainRepository.getTerrains(user_id, selectedFields);
+    }
+
     @Transactional
     public String create(TerrainRequest dto) {
         if (!userGrpcClient.validateUser(dto.user_id())) {
+            // TODO
             // I am throwing a RuntimeException cause i dont want the client/user to know the logic behind that
             // I should write a Log Slf4j to let know what is really happening
             throw new RuntimeException(i18nService.getMessage("user.notfound", dto.user_id()));

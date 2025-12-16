@@ -19,6 +19,17 @@ public class TerrainController {
 
     private final TerrainService terrainService;
 
+    // TODO: in the future implement Page<>
+    @GetMapping
+    public ResponseEntity<?> getTerrains(
+            // de momento no quiero devolver todos los terrenos asi que el required actua como filtro para devolver solo los del user_id
+            @RequestParam(required = true) UUID user_id,
+            @RequestParam(required = false) List<TerrainFields> fields
+    ) {
+        List<?> response = terrainService.getTerrains(user_id, fields);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<?> getTerrain(
             @PathVariable UUID id,
