@@ -23,6 +23,7 @@ services:
       DB_PASSWORD: postgres
       SERVER_PORT: 8083
       SPRING_PROFILES_ACTIVE: prod # Spring automaticamente elige el perfil prod
+      JWT_SECRET: CambiarEnElFuturoEstaCl4veNoesParaProduccion219834
     depends_on:
       - auth-db
 
