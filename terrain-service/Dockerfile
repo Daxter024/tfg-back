@@ -4,6 +4,7 @@ WORKDIR /app
 # Copiamos el código fuente
 COPY . .
 
+RUN chmod +x mvnw
 # Construimos el jar
 RUN ./mvnw -q -e -DskipTests clean package
 

@@ -4,8 +4,6 @@
 ## Change db credentials for production
 ####
 
-version: '4'
-
 services:
   terrain-db:
     image: postgis/postgis:15-3.5
