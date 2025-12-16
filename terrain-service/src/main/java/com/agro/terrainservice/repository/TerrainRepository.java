@@ -59,4 +59,10 @@ public class TerrainRepository {
             );
         }
     }
+
+    public boolean existsById(UUID id) {
+        String sql = "SELECT count(*) FROM terrain WHERE id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+        return count != null && count > 0;
+    }
 }
