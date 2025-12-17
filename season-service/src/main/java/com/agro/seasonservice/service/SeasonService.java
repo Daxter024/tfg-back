@@ -50,4 +50,9 @@ public class SeasonService {
     public void deleteSeason(UUID id) {
         seasonRepository.deleteSeason(id);
     }
+
+    @Transactional
+    public void deleteSeasonsByTerrainId(UUID terrainId) {
+        seasonRepository.deleteByTerrainId(terrainId);
+    }
 }

@@ -61,4 +61,9 @@ public class SeasonRepository {
             throw new ResourceNotFoundException(i18nService.getMessage("season.not.found"));
         }
     }
+
+    public void deleteByTerrainId(UUID terrainId) {
+        String sql = "DELETE FROM season WHERE terrain_id = ?";
+        jdbcTemplate.update(sql, terrainId);
+    }
 }
