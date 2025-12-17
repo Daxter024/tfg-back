@@ -48,12 +48,12 @@ public class TerrainController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> delete(
+    public ResponseEntity<Void> delete(
             @PathVariable UUID id,
             @RequestParam(required = true) UUID user_id
     ) {
-        String res = terrainService.delete(id, user_id);
-        return ResponseEntity.status(HttpStatus.OK).body(res);
+        terrainService.deleteTerrain(id, user_id);
+        return ResponseEntity.noContent().build();
     }
 
 }

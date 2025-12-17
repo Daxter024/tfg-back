@@ -65,4 +65,14 @@ public class TerrainRepository {
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
         return count != null && count > 0;
     }
+
+    public List<UUID> findIdsByUserId(UUID userId) {
+        String sql = "SELECT id FROM terrain WHERE user_id = ?";
+        return jdbcTemplate.query(sql, (rs, rowNum) -> UUID.fromString(rs.getString("id")), userId);
+    }
+
+    public void deleteById(UUID id) {
+        String sql = "DELETE FROM terrain WHERE id = ?";
+        jdbcTemplate.update(sql, id);
+    }
 }

@@ -13,9 +13,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -36,6 +39,9 @@ class TerrainServiceTest {
 
     @Mock
     private UserGrpcClient userGrpcClient;
+
+    @Mock
+    private EventPublisher eventPublisher;
 
     @InjectMocks
     private TerrainService terrainService;
@@ -84,5 +90,16 @@ class TerrainServiceTest {
         Map<String, Object> result = terrainService.getTerrain(id, null);
 
         assertEquals(expectedMap, result);
+    }
+
+    @Test
+    void deleteTerrain_ShouldPublishEvent() {
+        UUID id = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
+        terrainService.deleteTerrain(id, userId);
+
+        verify(terrainRepository).deleteTerrain(id, userId);
+        verify(eventPublisher).publishTerrainDeleted(any(com.agro.terrainservice.event.TerrainDeletedEvent.class));
     }
 }

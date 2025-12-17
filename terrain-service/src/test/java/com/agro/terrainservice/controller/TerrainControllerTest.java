@@ -20,13 +20,13 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doNothing;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = "grpc.server.port=0")
 @AutoConfigureMockMvc
-@Disabled("Disabled due to ApplicationContext loading issues with gRPC auto-configuration in test environment")
 class TerrainControllerTest {
 
         @Autowired
@@ -87,16 +87,15 @@ class TerrainControllerTest {
         }
 
         @Test
-        void delete_ShouldReturnOk_WhenTerrainExists() throws Exception {
+        void delete_ReturnsOk() throws Exception {
                 UUID id = UUID.randomUUID();
                 UUID userId = UUID.randomUUID();
-
-                when(terrainService.delete(any(UUID.class), any(UUID.class)))
-                                .thenReturn("Terrain deleted successfully");
+                // when(service.delete(any(UUID.class), any(UUID.class))).thenReturn("Deleted");
+                // Logic changed to void. Mocking accordingly.
+                doNothing().when(terrainService).deleteTerrain(any(UUID.class), any(UUID.class));
 
                 mockMvc.perform(delete("/terrain/{id}", id)
                                 .param("user_id", userId.toString()))
-                                .andExpect(status().isOk())
-                                .andExpect(content().string("Terrain deleted successfully"));
+                                .andExpect(status().isNoContent()); // Changed from isOk() to isNoContent()
         }
 }

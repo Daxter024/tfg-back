@@ -3,6 +3,7 @@ package com.agro.terrainservice.service;
 import com.agro.terrainservice.client.UserGrpcClient;
 import com.agro.terrainservice.constants.TerrainFields;
 import com.agro.terrainservice.dto.TerrainRequest;
+import com.agro.terrainservice.event.TerrainDeletedEvent;
 import com.agro.terrainservice.repository.TerrainRepository;
 import com.agro.terrainservice.utils.FieldsValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,6 +23,7 @@ public class TerrainService {
     private final ObjectMapper mapper;
     private final FieldsValidator fieldsValidator;
     private final UserGrpcClient userGrpcClient;
+    private final EventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getTerrain(UUID id, List<TerrainFields> fields) {
@@ -53,8 +55,17 @@ public class TerrainService {
     }
 
     @Transactional
-    public String delete(UUID id, UUID user_id) {
-        terrainRepository.deleteTerrain(id, user_id);
-        return i18nService.getMessage("terrain.deleted", id);
+    public void deleteTerrain(UUID id, UUID userId) {
+        terrainRepository.deleteTerrain(id, userId);
+        eventPublisher.publishTerrainDeleted(new TerrainDeletedEvent(id));
+    }
+
+    @Transactional
+    public void deleteTerrainsByUserId(UUID userId) {
+        List<UUID> terrainIds = terrainRepository.findIdsByUserId(userId);
+        for (UUID id : terrainIds) {
+            terrainRepository.deleteById(id);
+            eventPublisher.publishTerrainDeleted(new TerrainDeletedEvent(id));
+        }
     }
 }
