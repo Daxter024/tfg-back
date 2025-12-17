@@ -27,6 +27,12 @@ public class GrpcUserService extends UserValidationServiceGrpc.UserValidationSer
         } catch (IllegalArgumentException e) {
             // Invalid UUID
             exists = false;
+        } catch (Exception e) {
+            responseObserver.onError(io.grpc.Status.INTERNAL
+                    .withDescription("Internal error validating user: " + e.getMessage())
+                    .withCause(e)
+                    .asRuntimeException());
+            return;
         }
 
         UserValidationResponse response = UserValidationResponse.newBuilder()
