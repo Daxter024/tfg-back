@@ -68,4 +68,46 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Invalid argument");
         return ResponseEntity.status(status).body(problemDetail);
     }
+
+    @ExceptionHandler(AttachmentNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleAttachmentNotFoundException(AttachmentNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Attachment not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(UnsupportedMediaTypeException.class)
+    public ResponseEntity<ProblemDetail> handleUnsupportedMediaTypeException(UnsupportedMediaTypeException ex) {
+        HttpStatus status = HttpStatus.UNSUPPORTED_MEDIA_TYPE;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Unsupported media type");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(PayloadTooLargeException.class)
+    public ResponseEntity<ProblemDetail> handlePayloadTooLargeException(PayloadTooLargeException ex) {
+        HttpStatus status = HttpStatus.PAYLOAD_TOO_LARGE;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Payload too large");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(AttachmentQuotaExceededException.class)
+    public ResponseEntity<ProblemDetail> handleAttachmentQuotaExceededException(AttachmentQuotaExceededException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Attachment quota exceeded");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<ProblemDetail> handleMaxUploadSizeExceededException(
+            org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        HttpStatus status = HttpStatus.PAYLOAD_TOO_LARGE;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status,
+                i18nService.getMessage("attachment.size.exceeded"));
+        problemDetail.setTitle("Payload too large");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 }
