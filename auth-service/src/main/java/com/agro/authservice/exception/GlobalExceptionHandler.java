@@ -155,4 +155,20 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle(i18nService.getMessage("auth.validation.error.title"));
         return ResponseEntity.status(status).body(problemDetail);
     }
+
+    @ExceptionHandler(SamePasswordException.class)
+    public ResponseEntity<ProblemDetail> handleSamePasswordException(SamePasswordException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("auth.validation.error.title"));
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(InvalidPasswordResetException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidPasswordResetException(InvalidPasswordResetException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("user.password.reset.invalid.title"));
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 }
