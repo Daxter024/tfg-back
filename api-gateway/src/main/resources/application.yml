@@ -12,6 +12,21 @@ spring:
   cloud:
     gateway:
       routes:
+        # Rutas admin del auth-service (requieren JWT). Deben ir ANTES que la ruta
+        # genérica /auth/** para que el predicado más específico gane.
+        - id: auth-admin-route
+          uri: ${AUTH_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/auth/users/**,/auth/audit/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+            - name: CircuitBreaker
+              args:
+                name: authService
+                fallbackUri: forward:/fallback/auth
+                statusCodes: 500,502,503,504,505
+
         - id: auth-service-route
           uri: ${AUTH_SERVICE_URL:http://localhost:8085}
           predicates:
