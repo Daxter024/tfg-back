@@ -73,4 +73,24 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(problemDetail);
     }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public ResponseEntity<ProblemDetail> handleEmailAlreadyExistsException(EmailAlreadyExistsException ex) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("user.email.exists.title"));
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(PasswordMismatchException.class)
+    public ResponseEntity<ProblemDetail> handlePasswordMismatchException(PasswordMismatchException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("auth.validation.error.title"));
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
 }

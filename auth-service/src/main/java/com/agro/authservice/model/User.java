@@ -4,17 +4,28 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
+
     @Id
+    @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column(nullable = false)
-    private String username;
+    @Column(name = "full_name", nullable = false)
+    private String full_name;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -22,46 +33,21 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    // I do not use one to many cuz it's already done in flyway
+    @Column(name = "role_id")
     private int role_id;
 
-    public UUID getId() {
-        return id;
-    }
+    @Column(nullable = false)
+    private String status;
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant created_at;
 
-    public int getRole_id() {
-        return role_id;
-    }
+    @Column(name = "last_login_at")
+    private Instant last_login_at;
 
-    public void setRole_id(int role_id) {
-        this.role_id = role_id;
-    }
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failed_login_attempts;
 
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
+    @Column(name = "locked_until")
+    private Instant locked_until;
 }
