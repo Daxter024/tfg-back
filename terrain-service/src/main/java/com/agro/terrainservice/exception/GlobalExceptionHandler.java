@@ -20,19 +20,26 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TerrainNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleTerrainNotFoundException(TerrainNotFoundException ex) {
-
-        // Se usa el ProblemDetail pq sigue el RFC 7807
-
         HttpStatus status = HttpStatus.NOT_FOUND;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
         problemDetail.setTitle("Terrain not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 
-        // problemDetail.setProperty("timestamp", Instant.now());
-        // Irrelevante puesto que en la cabecera ya se incluye el timestamp
+    @ExceptionHandler(InvalidGeometryException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidGeometryException(InvalidGeometryException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Invalid geometry");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 
-        return ResponseEntity
-                .status(status)
-                .body(problemDetail);
+    @ExceptionHandler(AreaOutOfRangeException.class)
+    public ResponseEntity<ProblemDetail> handleAreaOutOfRangeException(AreaOutOfRangeException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Terrain area out of range");
+        return ResponseEntity.status(status).body(problemDetail);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -51,8 +58,14 @@ public class GlobalExceptionHandler {
         ProblemDetail problemDetail = ProblemDetail.forStatus(status);
         problemDetail.setTitle("Wrong payload");
         problemDetail.setProperty("errors", errors);
-        return ResponseEntity
-                .status(status)
-                .body(problemDetail);
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgumentException(IllegalArgumentException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Invalid argument");
+        return ResponseEntity.status(status).body(problemDetail);
     }
 }

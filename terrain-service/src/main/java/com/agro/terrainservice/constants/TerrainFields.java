@@ -8,6 +8,11 @@ public enum TerrainFields {
     area_m2,
     perimeter_m,
     centroid,
+    soil_type,
+    slope_percent,
+    irrigation,
+    cadastral_ref,
     created_at,
-    updated_at;
+    updated_at,
+    parcels_summary;
 }

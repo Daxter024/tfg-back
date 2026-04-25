@@ -80,7 +80,11 @@ class TerrainControllerTest {
         TerrainRequest request = new TerrainRequest(
                 "New Terrain",
                 UUID.randomUUID(),
-                geometry);
+                geometry,
+                null,
+                null,
+                null,
+                null);
 
         when(terrainService.create(any(TerrainRequest.class)))
                 .thenReturn("Terrain created successfully");

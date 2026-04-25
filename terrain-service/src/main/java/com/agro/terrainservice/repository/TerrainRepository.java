@@ -1,5 +1,7 @@
 package com.agro.terrainservice.repository;
 
+import com.agro.terrainservice.constants.IrrigationType;
+import com.agro.terrainservice.constants.SoilType;
 import com.agro.terrainservice.exception.TerrainNotFoundException;
 import com.agro.terrainservice.service.I18nService;
 import lombok.RequiredArgsConstructor;
@@ -35,19 +37,42 @@ public class TerrainRepository {
         return jdbcTemplate.queryForList(sql, user_id);
     }
 
-    public void saveWithCalculations(String name, UUID user_id, String geoJson) {
+    /**
+     * Inserta un terreno con todos los campos descriptivos opcionales (HU-TER-01).
+     * Los campos `soil_type` e `irrigation` son ENUMs en PostgreSQL — se castean
+     * explícitamente para que el driver JDBC no falle al pasar VARCHAR.
+     */
+    public UUID saveWithCalculations(String name,
+                                     UUID user_id,
+                                     String geoJson,
+                                     SoilType soilType,
+                                     Double slopePercent,
+                                     IrrigationType irrigation,
+                                     String cadastralRef) {
         String sql = """
                 INSERT INTO terrain (
-                name, user_id, geometry
+                    name, user_id, geometry,
+                    soil_type, slope_percent, irrigation, cadastral_ref
                 )
                 VALUES (
-                    ?,
-                    ?,
-                    ST_SetSRID(ST_GeomFromGeoJSON(?), 4326)
+                    ?, ?,
+                    ST_SetSRID(ST_GeomFromGeoJSON(?), 4326),
+                    CAST(? AS soil_type), ?, CAST(? AS irrigation_type), ?
                 )
+                RETURNING id
                 """;
 
-        jdbcTemplate.update(sql, name, user_id, geoJson);
+        return jdbcTemplate.queryForObject(
+                sql,
+                UUID.class,
+                name,
+                user_id,
+                geoJson,
+                soilType == null ? null : soilType.name(),
+                slopePercent,
+                irrigation == null ? null : irrigation.name(),
+                cadastralRef
+        );
     }
 
     public void deleteTerrain(UUID id, UUID user_id) {

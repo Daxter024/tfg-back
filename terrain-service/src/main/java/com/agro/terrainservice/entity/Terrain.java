@@ -1,6 +1,10 @@
 package com.agro.terrainservice.entity;
 
+import com.agro.terrainservice.constants.IrrigationType;
+import com.agro.terrainservice.constants.SoilType;
 import jakarta.persistence.Column;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -10,6 +14,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.Generated;
 import org.hibernate.annotations.GenerationTime;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
 
@@ -48,6 +54,22 @@ public class Terrain {
     @Column(insertable = false, updatable = false, columnDefinition = "geometry(Point, 4326)")
     @Generated(GenerationTime.ALWAYS)
     private Point centroid;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "soil_type", columnDefinition = "soil_type")
+    private SoilType soil_type;
+
+    @Column(name = "slope_percent", precision = 5, scale = 2)
+    private BigDecimal slope_percent;
+
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "irrigation", columnDefinition = "irrigation_type")
+    private IrrigationType irrigation;
+
+    @Column(name = "cadastral_ref", length = 40)
+    private String cadastral_ref;
 
     @Column(nullable = false, updatable = false)
     private Instant created_at = Instant.now();
