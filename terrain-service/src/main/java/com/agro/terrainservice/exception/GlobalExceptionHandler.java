@@ -110,4 +110,28 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Payload too large");
         return ResponseEntity.status(status).body(problemDetail);
     }
+
+    @ExceptionHandler(ParcelNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleParcelNotFoundException(ParcelNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Parcel not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(ParcelNotWithinTerrainException.class)
+    public ResponseEntity<ProblemDetail> handleParcelNotWithinTerrainException(ParcelNotWithinTerrainException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Parcel not within terrain");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(ParcelOverlapsException.class)
+    public ResponseEntity<ProblemDetail> handleParcelOverlapsException(ParcelOverlapsException ex) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Parcel overlaps existing parcel");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 }

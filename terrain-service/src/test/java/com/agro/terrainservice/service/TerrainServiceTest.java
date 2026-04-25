@@ -55,6 +55,9 @@ class TerrainServiceTest {
     @Mock
     private EventPublisher eventPublisher;
 
+    @Mock
+    private ParcelService parcelService;
+
     @InjectMocks
     private TerrainService terrainService;
 

@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package com.agro.parcel.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.agro.parcel.grpc";
+
+service ParcelService {
+  rpc CheckParcelExists (ParcelIdRequest) returns (ParcelExistsResponse);
+}
+
+message ParcelIdRequest {
+  string parcel_id = 1;
+}
+
+message ParcelExistsResponse {
+  bool exists = 1;
+}

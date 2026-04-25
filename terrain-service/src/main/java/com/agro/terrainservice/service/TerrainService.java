@@ -28,11 +28,19 @@ public class TerrainService {
     private final FieldsValidator fieldsValidator;
     private final UserGrpcClient userGrpcClient;
     private final EventPublisher eventPublisher;
+    private final ParcelService parcelService;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getTerrain(UUID id, List<TerrainFields> fields) {
         String selectedFields = fieldsValidator.formatFieldList(fields);
-        return terrainRepository.getTerrain(id, selectedFields);
+        Map<String, Object> base = terrainRepository.getTerrain(id, selectedFields);
+        if (fieldsValidator.includesParcelsSummary(fields)) {
+            // El campo virtual parcels_summary se compone aparte
+            double areaM2 = base.get("area_m2") instanceof Number n ? n.doubleValue() : 0d;
+            base = new java.util.LinkedHashMap<>(base);
+            base.put("parcels_summary", parcelService.computeSummary(id, areaM2));
+        }
+        return base;
     }
 
     @Transactional(readOnly = true)
@@ -90,6 +98,9 @@ public class TerrainService {
 
     @Transactional
     public void deleteTerrain(UUID id, UUID userId) {
+        // Antes del cascade SQL, emitimos un parcel-deleted por cada parcela
+        // del terreno para que los listeners downstream limpien sus datos.
+        parcelService.publishCascadeForTerrainDeletion(id);
         terrainRepository.deleteTerrain(id, userId);
         eventPublisher.publishTerrainDeleted(new TerrainDeletedEvent(id));
     }
@@ -98,6 +109,7 @@ public class TerrainService {
     public void deleteTerrainsByUserId(UUID userId) {
         List<UUID> terrainIds = terrainRepository.findIdsByUserId(userId);
         for (UUID id : terrainIds) {
+            parcelService.publishCascadeForTerrainDeletion(id);
             terrainRepository.deleteById(id);
             eventPublisher.publishTerrainDeleted(new TerrainDeletedEvent(id));
         }

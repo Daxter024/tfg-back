@@ -15,4 +15,12 @@ public class KafkaConfig {
                 .replicas(1)
                 .build();
     }
+
+    @Bean
+    public NewTopic parcelDeletedTopic() {
+        return TopicBuilder.name("parcel-deleted")
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
 }
