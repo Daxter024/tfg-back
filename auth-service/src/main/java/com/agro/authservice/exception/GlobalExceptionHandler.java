@@ -93,4 +93,34 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(problemDetail);
     }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<ProblemDetail> handleAccountLockedException(AccountLockedException ex) {
+        HttpStatus status = HttpStatus.LOCKED;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("auth.account.locked.title"));
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(AccountInactiveException.class)
+    public ResponseEntity<ProblemDetail> handleAccountInactiveException(AccountInactiveException ex) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("auth.account.inactive.title"));
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidRefreshTokenException(InvalidRefreshTokenException ex) {
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("auth.refresh.invalid.title"));
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
 }
