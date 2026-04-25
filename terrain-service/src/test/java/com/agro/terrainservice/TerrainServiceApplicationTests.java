@@ -1,10 +1,18 @@
 package com.agro.terrainservice;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration;
+import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest(properties = "grpc.server.port=0")
+@SpringBootTest
+@EnableAutoConfiguration(exclude = {
+        HibernateJpaAutoConfiguration.class,
+        JpaRepositoriesAutoConfiguration.class
+})
+@ActiveProfiles("test")
 class TerrainServiceApplicationTests {
 
     @Test
