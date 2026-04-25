@@ -123,4 +123,36 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(problemDetail);
     }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleUserNotFoundException(UserNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("user.not.found.title"));
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(SelfModificationForbiddenException.class)
+    public ResponseEntity<ProblemDetail> handleSelfModificationForbiddenException(SelfModificationForbiddenException ex) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("user.self.forbidden.title"));
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(ForbiddenRoleException.class)
+    public ResponseEntity<ProblemDetail> handleForbiddenRoleException(ForbiddenRoleException ex) {
+        HttpStatus status = HttpStatus.FORBIDDEN;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("user.admin.required.title"));
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(InvalidRoleException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidRoleException(InvalidRoleException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle(i18nService.getMessage("auth.validation.error.title"));
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 }

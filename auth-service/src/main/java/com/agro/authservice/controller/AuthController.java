@@ -90,12 +90,4 @@ public class AuthController {
                 : ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
-    @Operation(summary = "Delete User")
-    @DeleteMapping("/users/{id}")
-    public ResponseEntity<Void> deleteUser(
-            @PathVariable UUID id
-    ) {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
-    }
 }
