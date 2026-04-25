@@ -1,13 +1,23 @@
 package com.agro.terrainservice.controller;
 
 import com.agro.terrainservice.constants.TerrainFields;
+import com.agro.terrainservice.dto.CadastralImportRequest;
+import com.agro.terrainservice.dto.CadastralImportResponse;
 import com.agro.terrainservice.dto.TerrainRequest;
+import com.agro.terrainservice.service.CadastralImportService;
 import com.agro.terrainservice.service.TerrainService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
@@ -18,11 +28,10 @@ import java.util.UUID;
 public class TerrainController {
 
     private final TerrainService terrainService;
+    private final CadastralImportService cadastralImportService;
 
-    // TODO: in the future implement Page<>
     @GetMapping
     public ResponseEntity<?> getTerrains(
-            // de momento no quiero devolver todos los terrenos asi que el required actua como filtro para devolver solo los del user_id
             @RequestParam(required = true) UUID user_id,
             @RequestParam(required = false) List<TerrainFields> fields
     ) {
@@ -47,6 +56,19 @@ public class TerrainController {
         return ResponseEntity.status(HttpStatus.CREATED).body(res);
     }
 
+    /**
+     * HU-TER-05 — propone un terreno a partir de una referencia catastral o
+     * SIGPAC. No persiste; el cliente edita la propuesta y luego llama a
+     * {@code POST /terrain} con el body resultante (incluyendo la
+     * {@code cadastral_ref} para trazabilidad).
+     */
+    @PostMapping("/import")
+    public ResponseEntity<CadastralImportResponse> importFromCadastral(
+            @Valid @RequestBody CadastralImportRequest dto
+    ) {
+        return ResponseEntity.ok(cadastralImportService.importReference(dto));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(
             @PathVariable UUID id,
@@ -55,5 +77,4 @@ public class TerrainController {
         terrainService.deleteTerrain(id, user_id);
         return ResponseEntity.noContent().build();
     }
-
 }

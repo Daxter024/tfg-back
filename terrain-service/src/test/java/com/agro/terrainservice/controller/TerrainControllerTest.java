@@ -39,6 +39,9 @@ class TerrainControllerTest {
     private TerrainService terrainService;
 
     @MockitoBean
+    private com.agro.terrainservice.service.CadastralImportService cadastralImportService;
+
+    @MockitoBean
     private I18nService i18nService;
 
     @Autowired

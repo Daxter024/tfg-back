@@ -134,4 +134,42 @@ public class GlobalExceptionHandler {
         problemDetail.setTitle("Parcel overlaps existing parcel");
         return ResponseEntity.status(status).body(problemDetail);
     }
+
+    @ExceptionHandler(CadastralReferenceMalformedException.class)
+    public ResponseEntity<ProblemDetail> handleCadastralReferenceMalformedException(
+            CadastralReferenceMalformedException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Malformed cadastral reference");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(CadastralReferenceNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleCadastralReferenceNotFoundException(
+            CadastralReferenceNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Cadastral reference not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(CadastralApiTimeoutException.class)
+    public ResponseEntity<ProblemDetail> handleCadastralApiTimeoutException(
+            CadastralApiTimeoutException ex) {
+        HttpStatus status = HttpStatus.GATEWAY_TIMEOUT;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status,
+                i18nService.getMessage("cadastral.api.timeout"));
+        problemDetail.setTitle("Cadastral API timeout");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(CadastralApiUnavailableException.class)
+    public ResponseEntity<ProblemDetail> handleCadastralApiUnavailableException(
+            CadastralApiUnavailableException ex) {
+        HttpStatus status = HttpStatus.BAD_GATEWAY;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status,
+                i18nService.getMessage("cadastral.api.unavailable"));
+        problemDetail.setTitle("Cadastral API unavailable");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 }
