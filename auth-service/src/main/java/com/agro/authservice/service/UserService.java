@@ -1,10 +1,8 @@
 package com.agro.authservice.service;
 
 import com.agro.authservice.dto.RegisterRequestDTO;
-import com.agro.authservice.event.UserDeletedEvent;
 import com.agro.authservice.exception.EmailAlreadyExistsException;
 import com.agro.authservice.exception.PasswordMismatchException;
-import com.agro.authservice.kafka.EventPublisher;
 import com.agro.authservice.model.Role;
 import com.agro.authservice.model.User;
 import com.agro.authservice.repository.RoleRepository;
@@ -27,7 +25,6 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final EventPublisher eventPublisher;
     private final PasswordEncoder passwordEncoder;
     private final AuditLogService auditLogService;
     private final MailService mailService;
@@ -35,14 +32,12 @@ public class UserService {
 
     public UserService(UserRepository userRepository,
                        RoleRepository roleRepository,
-                       EventPublisher eventPublisher,
                        PasswordEncoder passwordEncoder,
                        AuditLogService auditLogService,
                        MailService mailService,
                        I18nService i18nService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
-        this.eventPublisher = eventPublisher;
         this.passwordEncoder = passwordEncoder;
         this.auditLogService = auditLogService;
         this.mailService = mailService;
@@ -95,11 +90,4 @@ public class UserService {
         return saved.getId();
     }
 
-    @Transactional
-    public void deleteUser(UUID userId) {
-        if (userRepository.existsById(userId)) {
-            userRepository.deleteById(userId);
-            eventPublisher.publishUserDeleted(new UserDeletedEvent(userId));
-        }
-    }
 }
