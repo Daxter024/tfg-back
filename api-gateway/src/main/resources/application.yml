@@ -55,6 +55,7 @@ spring:
             - Path=/api/terrain/**
           filters:
             - StripPrefix=1
+            - JwtValidation
             - name: CircuitBreaker
               args:
                 name: terrainService
