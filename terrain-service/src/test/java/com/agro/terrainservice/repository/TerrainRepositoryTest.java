@@ -6,19 +6,25 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.jdbc.Sql;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+/**
+ * Slice JDBC del {@link TerrainRepository} contra H2.
+ *
+ * <p>Limitaciones conocidas: H2 no expone PostGIS, asi que solo testeamos
+ * operaciones que no invocan funciones espaciales (existsById, deleteById,
+ * findIdsByUserId). El insert real con {@code ST_GeomFromGeoJSON} se cubre
+ * por los tests unitarios del service y, cuando se integre Testcontainers
+ * postgis, por un test de integracion.</p>
+ */
 @JdbcTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @Import(TerrainRepository.class)
@@ -35,43 +41,49 @@ class TerrainRepositoryTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @MockBean
+    @MockitoBean
     private I18nService i18nService;
 
     @BeforeEach
     void setUp() {
-        // H2 in-memory, schema creation usually handled by classpath:schema.sql or
-        // Hibernate
-        // We will create the table manually for H2 if it doesn't exist to ensure test
-        // runs
-        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS terrain (" +
+        // Esquema simplificado: H2 sin PostGIS. Suficiente para existsById /
+        // findIdsByUserId / deleteById.
+        jdbcTemplate.execute("DROP TABLE IF EXISTS terrain");
+        jdbcTemplate.execute("CREATE TABLE terrain (" +
                 "id UUID DEFAULT random_uuid() PRIMARY KEY, " +
                 "name VARCHAR(255), " +
                 "user_id UUID, " +
-                "geometry VARCHAR(255)" + // Simplified for H2 test without PostGIS
+                "geometry VARCHAR(255)" +
                 ")");
-        jdbcTemplate.execute("DELETE FROM terrain");
     }
 
     @Test
-    void saveWithCalculations_ShouldInsertTerrain() {
-        UUID userId = UUID.randomUUID();
-        // Just mocking the query change because H2 won't support ST_GeomFromGeoJSON
-        // easily without plugins
-        // But we can test the repo logic if we accept that saveWithCalculations fails
-        // on H2 without H2GIS.
-        // Wait, repository uses "ST_SetSRID(ST_GeomFromGeoJSON". This will fail on
-        // standard H2.
-        // We might need to mock the JDBC template or use H2GIS.
-        // Given constraints, let's verify existsById which is simpler.
-    }
-
-    @Test
-    void existsById_ShouldReturnTrue_WhenExists() {
+    void existsById_returnsTrue_whenRowPresent() {
         UUID id = UUID.randomUUID();
-        jdbcTemplate.update("INSERT INTO terrain (id, name, user_id) VALUES (?, ?, ?)", id, "Test", UUID.randomUUID());
+        jdbcTemplate.update("INSERT INTO terrain (id, name, user_id) VALUES (?, ?, ?)",
+                id, "Test", UUID.randomUUID());
 
         boolean exists = terrainRepository.existsById(id);
         assertThat(exists).isTrue();
+    }
+
+    @Test
+    void existsById_returnsFalse_whenRowMissing() {
+        boolean exists = terrainRepository.existsById(UUID.randomUUID());
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    void findIdsByUserId_returnsAllOwnedIds() {
+        UUID userId = UUID.randomUUID();
+        UUID a = UUID.randomUUID();
+        UUID b = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO terrain (id, name, user_id) VALUES (?, ?, ?)", a, "A", userId);
+        jdbcTemplate.update("INSERT INTO terrain (id, name, user_id) VALUES (?, ?, ?)", b, "B", userId);
+        jdbcTemplate.update("INSERT INTO terrain (id, name, user_id) VALUES (?, ?, ?)",
+                UUID.randomUUID(), "Otro", UUID.randomUUID());
+
+        var ids = terrainRepository.findIdsByUserId(userId);
+        assertThat(ids).containsExactlyInAnyOrder(a, b);
     }
 }

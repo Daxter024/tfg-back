@@ -2,6 +2,7 @@ package com.agro.terrainservice.exception;
 
 import com.agro.terrainservice.service.I18nService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -20,19 +21,55 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(TerrainNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleTerrainNotFoundException(TerrainNotFoundException ex) {
-
-        // Se usa el ProblemDetail pq sigue el RFC 7807
-
         HttpStatus status = HttpStatus.NOT_FOUND;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
         problemDetail.setTitle("Terrain not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 
-        // problemDetail.setProperty("timestamp", Instant.now());
-        // Irrelevante puesto que en la cabecera ya se incluye el timestamp
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleUserNotFoundException(UserNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("User not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
 
-        return ResponseEntity
-                .status(status)
-                .body(problemDetail);
+    @ExceptionHandler(InvalidGeometryException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidGeometryException(InvalidGeometryException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Invalid geometry");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(AreaOutOfRangeException.class)
+    public ResponseEntity<ProblemDetail> handleAreaOutOfRangeException(AreaOutOfRangeException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Area out of range");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(InvalidFieldException.class)
+    public ResponseEntity<ProblemDetail> handleInvalidFieldException(InvalidFieldException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Invalid field");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ProblemDetail> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        // Constraints CHECK de PostgreSQL (area, slope) llegan aqui si no se han
+        // validado antes en service. Devolvemos 400 con un mensaje i18n generico.
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                status,
+                i18nService.getMessage("terrain.integrity.violation")
+        );
+        problemDetail.setTitle("Data integrity violation");
+        return ResponseEntity.status(status).body(problemDetail);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -42,17 +79,20 @@ public class GlobalExceptionHandler {
         List<String> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
-                .map(error -> {
-                    String resolvedMessage = error.getDefaultMessage();
-                    return error.getField() + ": " + resolvedMessage;
-                })
+                .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.toList());
 
         ProblemDetail problemDetail = ProblemDetail.forStatus(status);
         problemDetail.setTitle("Wrong payload");
         problemDetail.setProperty("errors", errors);
-        return ResponseEntity
-                .status(status)
-                .body(problemDetail);
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgumentException(IllegalArgumentException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Illegal argument");
+        return ResponseEntity.status(status).body(problemDetail);
     }
 }
