@@ -61,6 +61,38 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(problemDetail);
     }
 
+    @ExceptionHandler(ParcelNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleParcelNotFoundException(ParcelNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Parcel not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(ParcelOverlapException.class)
+    public ResponseEntity<ProblemDetail> handleParcelOverlapException(ParcelOverlapException ex) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Parcel overlaps with another parcel");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(ParcelNotWithinTerrainException.class)
+    public ResponseEntity<ProblemDetail> handleParcelNotWithinTerrainException(ParcelNotWithinTerrainException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Parcel not within terrain");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(DuplicateParcelNameException.class)
+    public ResponseEntity<ProblemDetail> handleDuplicateParcelNameException(DuplicateParcelNameException ex) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Parcel name already in use");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
     @ExceptionHandler(AttachmentNotFoundException.class)
     public ResponseEntity<ProblemDetail> handleAttachmentNotFoundException(AttachmentNotFoundException ex) {
         HttpStatus status = HttpStatus.NOT_FOUND;
