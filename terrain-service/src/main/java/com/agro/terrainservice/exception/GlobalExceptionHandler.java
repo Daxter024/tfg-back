@@ -136,6 +136,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(problemDetail);
     }
 
+    @ExceptionHandler(CadastralImportException.class)
+    public ResponseEntity<ProblemDetail> handleCadastralImportException(CadastralImportException ex) {
+        HttpStatus status = ex.getStatus();
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Cadastral import failed");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ProblemDetail> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
         // Constraints CHECK de PostgreSQL (area, slope) llegan aqui si no se han

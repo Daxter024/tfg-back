@@ -1,7 +1,10 @@
 package com.agro.terrainservice.controller;
 
 import com.agro.terrainservice.constants.TerrainFields;
+import com.agro.terrainservice.dto.CadastralImportRequest;
+import com.agro.terrainservice.dto.CadastralImportResponse;
 import com.agro.terrainservice.dto.TerrainRequest;
+import com.agro.terrainservice.service.CadastralImportService;
 import com.agro.terrainservice.service.I18nService;
 import com.agro.terrainservice.service.TerrainService;
 import jakarta.validation.Valid;
@@ -21,6 +24,7 @@ public class TerrainController {
 
     private final TerrainService terrainService;
     private final I18nService i18nService;
+    private final CadastralImportService cadastralImportService;
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getTerrains(
@@ -57,5 +61,17 @@ public class TerrainController {
     ) {
         terrainService.deleteTerrain(id, user_id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * HU-TER-05: importacion desde Catastro / SIGPAC. NO crea el terreno; solo
+     * devuelve una propuesta editable. El cliente luego invoca {@code POST
+     * /terrain} con los campos confirmados (incluyendo {@code cadastral_ref}).
+     */
+    @PostMapping("/import")
+    public ResponseEntity<CadastralImportResponse> importCadastral(
+            @Valid @RequestBody CadastralImportRequest dto
+    ) {
+        return ResponseEntity.ok(cadastralImportService.fetch(dto));
     }
 }
