@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,6 +58,49 @@ public class GlobalExceptionHandler {
         HttpStatus status = HttpStatus.BAD_REQUEST;
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
         problemDetail.setTitle("Invalid field");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(AttachmentNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleAttachmentNotFoundException(AttachmentNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Attachment not found");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(AttachmentMimeForbiddenException.class)
+    public ResponseEntity<ProblemDetail> handleAttachmentMimeForbiddenException(AttachmentMimeForbiddenException ex) {
+        HttpStatus status = HttpStatus.UNSUPPORTED_MEDIA_TYPE;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Attachment MIME type not allowed");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(AttachmentQuotaExceededException.class)
+    public ResponseEntity<ProblemDetail> handleAttachmentQuotaExceededException(AttachmentQuotaExceededException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Attachment quota exceeded");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ProblemDetail> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+        HttpStatus status = HttpStatus.PAYLOAD_TOO_LARGE;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(
+                status,
+                i18nService.getMessage("attachment.size.exceeded")
+        );
+        problemDetail.setTitle("Attachment size exceeded");
+        return ResponseEntity.status(status).body(problemDetail);
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ProblemDetail> handleMultipartException(MultipartException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Multipart request error");
         return ResponseEntity.status(status).body(problemDetail);
     }
 
