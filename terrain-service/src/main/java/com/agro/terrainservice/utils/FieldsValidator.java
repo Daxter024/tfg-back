@@ -23,9 +23,9 @@ public class FieldsValidator {
                     String fieldName = field.name().toLowerCase();
                     switch (fieldName) {
                         case "geometry":
-                            return String.format("ST_AsGeoJSON(geometry) AS geometry");
+                            return "ST_AsGeoJSON(geometry) AS geometry";
                         case "centroid":
-                            return String.format("ST_AsGeoJSON(ST_Centroid(geometry)) AS centroid");
+                            return "ST_AsGeoJSON(ST_Centroid(geometry)) AS centroid";
                         default:
                             return fieldName;
                     }
