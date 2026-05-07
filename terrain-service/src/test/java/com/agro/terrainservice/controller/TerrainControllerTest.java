@@ -2,6 +2,7 @@ package com.agro.terrainservice.controller;
 
 import com.agro.terrainservice.dto.TerrainRequest;
 import com.agro.terrainservice.exception.GlobalExceptionHandler;
+import com.agro.terrainservice.service.CadastralImportService;
 import com.agro.terrainservice.service.I18nService;
 import com.agro.terrainservice.service.TerrainService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +40,7 @@ class TerrainControllerTest {
 
     @MockitoBean private TerrainService terrainService;
     @MockitoBean private I18nService i18nService;
+    @MockitoBean private CadastralImportService cadastralImportService;
 
     @Test
     void getTerrains_returnsList_whenUserIdProvided() throws Exception {
@@ -110,5 +112,31 @@ class TerrainControllerTest {
 
         mockMvc.perform(delete("/terrain/{id}", id).param("user_id", userId.toString()))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void importCadastral_returns200_withSuggestion() throws Exception {
+        com.agro.terrainservice.dto.CadastralImportResponse suggestion =
+                new com.agro.terrainservice.dto.CadastralImportResponse(
+                        "1234ABCDEFGHIJKL5678",
+                        "Parcela Catastro",
+                        Map.of("type", "Polygon", "coordinates", java.util.List.of()),
+                        12345.6,
+                        "Agricola",
+                        "TA",
+                        "Almeria",
+                        "Almeria");
+        when(cadastralImportService.fetch(any())).thenReturn(suggestion);
+
+        String body = """
+                {"reference":"1234ABCDEFGHIJKL5678","kind":"CADASTRAL"}
+                """;
+
+        mockMvc.perform(post("/terrain/import")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.reference").value("1234ABCDEFGHIJKL5678"))
+                .andExpect(jsonPath("$.suggested_name").value("Parcela Catastro"));
     }
 }
