@@ -34,7 +34,6 @@ public class TerrainService {
     private final FieldsValidator fieldsValidator;
     private final UserGrpcClient userGrpcClient;
     private final EventPublisher eventPublisher;
-    private final ParcelService parcelService;
 
     @Transactional(readOnly = true)
     public Map<String, Object> getTerrain(UUID id, List<TerrainFields> fields) {
@@ -103,10 +102,6 @@ public class TerrainService {
 
     @Transactional
     public void deleteTerrain(UUID id, UUID userId) {
-        // HU-TER-04 §3.7: emitimos un parcel-deleted por cada parcela ANTES de
-        // que el cascade SQL borre las filas, asi los listeners downstream
-        // pueden limpiar sus referencias en el orden correcto.
-        parcelService.publishCascadeDeletesForTerrain(id);
         terrainRepository.deleteTerrain(id, userId);
         eventPublisher.publishTerrainDeleted(new TerrainDeletedEvent(id));
     }
@@ -115,8 +110,6 @@ public class TerrainService {
     public void deleteTerrainsByUserId(UUID userId) {
         List<UUID> terrainIds = terrainRepository.findIdsByUserId(userId);
         for (UUID id : terrainIds) {
-            // Mismo orden: parcel-deleted -> delete row -> terrain-deleted.
-            parcelService.publishCascadeDeletesForTerrain(id);
             terrainRepository.deleteById(id);
             eventPublisher.publishTerrainDeleted(new TerrainDeletedEvent(id));
         }
