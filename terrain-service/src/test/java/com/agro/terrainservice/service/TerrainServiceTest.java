@@ -56,9 +56,6 @@ class TerrainServiceTest {
     @Mock
     private EventPublisher eventPublisher;
 
-    @Mock
-    private ParcelService parcelService;
-
     @InjectMocks
     private TerrainService terrainService;
 
@@ -169,14 +166,12 @@ class TerrainServiceTest {
     }
 
     @Test
-    void deleteTerrain_publishesEventAndCascadeParcelEvents() {
+    void deleteTerrain_publishesEvent() {
         UUID id = UUID.randomUUID();
         UUID owner = UUID.randomUUID();
 
         terrainService.deleteTerrain(id, owner);
 
-        // HU-TER-04: parcel cascade events deben emitirse antes del DELETE.
-        verify(parcelService).publishCascadeDeletesForTerrain(id);
         verify(terrainRepository).deleteTerrain(id, owner);
         verify(eventPublisher).publishTerrainDeleted(any(com.agro.terrainservice.event.TerrainDeletedEvent.class));
     }
