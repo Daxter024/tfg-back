@@ -26,6 +26,13 @@ services:
       JWT_SECRET: CambiarEnElFuturoEstaCl4veNoesParaProduccion219834
     depends_on:
       - auth-db
+    networks:
+      - default
+      - agro-net
 
 volumes:
   db_auth_data:
+
+networks:
+  agro-net:
+    external: true

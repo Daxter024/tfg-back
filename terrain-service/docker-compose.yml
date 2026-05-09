@@ -31,6 +31,9 @@ services:
     depends_on:
       - terrain-db
     restart: on-failure
+    networks:
+      - default
+      - agro-net
 
   terrain-service-prod:
     build: .
@@ -46,6 +49,13 @@ services:
     depends_on:
       - terrain-db
     restart: always
+    networks:
+      - default
+      - agro-net
 
 volumes:
   db_data:
+
+networks:
+  agro-net:
+    external: true
