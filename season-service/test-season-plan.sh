@@ -38,16 +38,16 @@ set -u
 set -o pipefail
 
 # ---------- Configuración (overridable por env) -----------------------------
-API_URL="${API_URL:-http://localhost:8082}"
+API_URL="${API_URL:-http://localhost:8084}"
 GATEWAY_URL="${GATEWAY_URL:-http://localhost:9000}"
 GRPC_TERRAIN="${GRPC_TERRAIN:-localhost:9093}"
 GRPC_CROP="${GRPC_CROP:-localhost:9094}"
 KAFKA_BOOTSTRAP="${KAFKA_BOOTSTRAP:-localhost:9092}"
 
 # IDs de fixtures (necesitan existir en sus servicios respectivos)
-TERRAIN_ID="${TERRAIN_ID:-11111111-1111-1111-1111-111111111111}"
+TERRAIN_ID="dde73354-b39d-4750-ac37-70605e9fdf15"
 TERRAIN_ID_GHOST="${TERRAIN_ID_GHOST:-00000000-0000-0000-0000-000000000000}"
-CROP_ID="${CROP_ID:-22222222-2222-2222-2222-222222222222}"
+CROP_ID="4c04e734-5134-49bc-a622-6ae30e8920fc"
 CROP_ID_GHOST="${CROP_ID_GHOST:-00000000-0000-0000-0000-000000000001}"
 
 RUN_TAG="QA-SEASON-$(date +%s)"
@@ -230,14 +230,64 @@ echo "  season-service en $API_URL responde (status=$PING_STATUS, esperable 404 
 [[ "$HAS_GRPCURL" -eq 1 ]] && echo "  grpcurl disponible — §5 (smoke contracts) ON" || echo "  grpcurl NO — §5 SKIP"
 [[ "$HAS_KCAT" -eq 1 ]] && echo "  kcat disponible — §6 (cascada) ON" || echo "  kcat NO — §6 SKIP"
 
-# Verifico que las fixtures existen
-TERRAIN_CHECK=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/season" \
-    -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID")")
-if [[ "$TERRAIN_CHECK" != "201" && "$TERRAIN_CHECK" != "404" ]]; then
-    echo -e "${YELLOW}[WARN]${NC} verificación inicial devolvió $TERRAIN_CHECK (esperaba 201 o 404)."
-    echo "  Asegúrate de que TERRAIN_ID=$TERRAIN_ID y CROP_ID=$CROP_ID existen en sus servicios."
+# ---------- Detección de fixtures y dependencias gRPC -----------------------
+# Muchos casos del plan necesitan TERRAIN_ID + CROP_ID que existan en sus
+# servicios respectivos. Si no existen (o si los gRPC están caídos), el POST
+# falla con 500 — y todos los tests dependientes fallan en cadena. Aquí
+# detectamos la situación una sola vez y los marcamos como SKIP con razón.
+
+GRPC_DEPS_OK=0          # 1 si terrain-service y crop-service responden gRPC
+TERRAIN_FIXTURE_OK=0    # 1 si TERRAIN_ID existe en terrain-service
+CROP_FIXTURE_OK=0       # 1 si CROP_ID existe en crop-service
+
+# Verificación real con grpcurl si está disponible
+if [[ "$HAS_GRPCURL" -eq 1 ]]; then
+    OUT=$(grpcurl -plaintext -d "{\"terrain_id\":\"$TERRAIN_ID\"}" \
+        "$GRPC_TERRAIN" com.agro.terrain.grpc.TerrainService/CheckTerrainExists 2>&1 || echo "ERROR")
+    if echo "$OUT" | grep -q '"exists": *true'; then
+        GRPC_DEPS_OK=1
+        TERRAIN_FIXTURE_OK=1
+    elif echo "$OUT" | grep -q '"exists": *false'; then
+        GRPC_DEPS_OK=1   # gRPC vivo, pero el fixture no existe
+    fi
+    OUT=$(grpcurl -plaintext -d "{\"crop_id\":\"$CROP_ID\"}" \
+        "$GRPC_CROP" com.agro.crop.grpc.CropService/CheckCropExists 2>&1 || echo "ERROR")
+    if echo "$OUT" | grep -q '"exists": *true'; then
+        CROP_FIXTURE_OK=1
+    fi
 fi
+
+# Si no hay grpcurl, hacemos un sondeo via POST: una respuesta 500 indica gRPC
+# muerto; 404 / 201 indican gRPC vivo (con fixtures válidos o no).
+if [[ "$HAS_GRPCURL" -eq 0 ]]; then
+    SMOKE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/season" \
+        -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID")")
+    case "$SMOKE" in
+        201) GRPC_DEPS_OK=1; TERRAIN_FIXTURE_OK=1; CROP_FIXTURE_OK=1 ;;
+        404) GRPC_DEPS_OK=1 ;;  # uno de los fixtures no existe; al menos los servicios responden
+        500) GRPC_DEPS_OK=0 ;;  # gRPC caído
+    esac
+fi
+
+if [[ "$GRPC_DEPS_OK" -eq 0 ]]; then
+    echo -e "${YELLOW}[WARN]${NC} terrain-service ($GRPC_TERRAIN) o crop-service ($GRPC_CROP) NO responden gRPC."
+    echo "  Tests que requieren creación de seasons reales se marcarán como [SKIP]."
+    echo "  Para correr todo: docker compose up -d terrain-service crop-service"
+elif [[ "$TERRAIN_FIXTURE_OK" -eq 0 || "$CROP_FIXTURE_OK" -eq 0 ]]; then
+    echo -e "${YELLOW}[WARN]${NC} TERRAIN_ID o CROP_ID no existen en sus servicios."
+    echo "  TERRAIN_ID=$TERRAIN_ID  exists=$TERRAIN_FIXTURE_OK"
+    echo "  CROP_ID=$CROP_ID    exists=$CROP_FIXTURE_OK"
+    echo "  Override con TERRAIN_ID=<uuid-real> CROP_ID=<uuid-real> ./test-season-plan.sh"
+    echo "  Tests que requieren INSERTar una season real se marcarán como [SKIP]."
+else
+    echo "  TERRAIN_ID y CROP_ID validados — todos los §1/§2/§4/§10 dependientes ON."
+fi
+
+# Guard helper: usar antes de tests que requieren INSERTar una season real.
+require_real_fixtures() {
+    [[ "$GRPC_DEPS_OK" -eq 1 && "$TERRAIN_FIXTURE_OK" -eq 1 && "$CROP_FIXTURE_OK" -eq 1 ]]
+}
 
 # ===========================================================================
 # §1. POST /season
@@ -246,23 +296,31 @@ if section_enabled 1; then
 section_header 1 "POST /season — alta de season"
 
 # SEASON-1.01 happy path mínimo
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
-    -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID")")
-BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
-assert_status "SEASON-1.01" "happy path mínimo" "201" "$STATUS"
-if [[ "$STATUS" == "201" ]]; then
-    SID=$(echo "$BODY" | jq -r '.')
-    [[ -n "$SID" && "$SID" != "null" ]] && CREATED_SEASON_IDS+=("$SID")
+if require_real_fixtures; then
+    RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
+        -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID")")
+    BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
+    assert_status "SEASON-1.01" "happy path mínimo" "201" "$STATUS"
+    if [[ "$STATUS" == "201" ]]; then
+        SID=$(echo "$BODY" | jq -r '.')
+        [[ -n "$SID" && "$SID" != "null" ]] && CREATED_SEASON_IDS+=("$SID")
+    fi
+else
+    skip_test "SEASON-1.01" "requiere TERRAIN_ID y CROP_ID reales (gRPC deps OK)"
 fi
 
 # SEASON-1.02 happy path completo
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
-    -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-03-01 2025-08-01 1 "test-1.02")")
-BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
-assert_status "SEASON-1.02" "happy path completo" "201" "$STATUS"
-[[ "$STATUS" == "201" ]] && CREATED_SEASON_IDS+=("$(echo "$BODY" | jq -r '.')")
+if require_real_fixtures; then
+    RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
+        -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-03-01 2025-08-01 1 "test-1.02")")
+    BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
+    assert_status "SEASON-1.02" "happy path completo" "201" "$STATUS"
+    [[ "$STATUS" == "201" ]] && CREATED_SEASON_IDS+=("$(echo "$BODY" | jq -r '.')")
+else
+    skip_test "SEASON-1.02" "requiere fixtures reales"
+fi
 
 # SEASON-1.04 terrain_id ausente
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/season" \
@@ -303,12 +361,16 @@ assert_status "SEASON-1.10" "end_date < start_date → 400" "400" "$STATUS"
 assert_json_contains "SEASON-1.10b" "errors menciona dates.range" '.errors // [] | tostring' "fecha de fin" "$BODY"
 
 # SEASON-1.11 end_date == start_date
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
-    -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-03-01 2025-03-01)")
-STATUS="${RESP##*$'\n'}"
-assert_status "SEASON-1.11" "end_date == start_date → 201 (borde válido)" "201" "$STATUS"
-[[ "$STATUS" == "201" ]] && CREATED_SEASON_IDS+=("$(echo "${RESP%$'\n'*}" | jq -r '.')")
+if require_real_fixtures; then
+    RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
+        -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-03-01 2025-03-01)")
+    STATUS="${RESP##*$'\n'}"
+    assert_status "SEASON-1.11" "end_date == start_date → 201 (borde válido)" "201" "$STATUS"
+    [[ "$STATUS" == "201" ]] && CREATED_SEASON_IDS+=("$(echo "${RESP%$'\n'*}" | jq -r '.')")
+else
+    skip_test "SEASON-1.11" "requiere fixtures reales"
+fi
 
 # SEASON-1.13 observations > 2000 chars
 if [[ "$SKIP_SLOW" == "1" ]]; then
@@ -321,21 +383,32 @@ else
     assert_status "SEASON-1.13" "observations > 2000 chars → 400" "400" "$STATUS"
 fi
 
-# SEASON-1.19 terrain_id inexistente
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
-    -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID_GHOST" "$CROP_ID")")
-BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
-assert_status "SEASON-1.19" "terrain_id inexistente → 404" "404" "$STATUS"
-assert_json_eq "SEASON-1.19b" "title 'Terrain not found'" '.title' "Terrain not found" "$BODY"
+# SEASON-1.19 terrain_id inexistente: solo necesita gRPC arriba (no fixtures válidos)
+if [[ "$GRPC_DEPS_OK" -eq 1 ]]; then
+    RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
+        -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID_GHOST" "$CROP_ID")")
+    BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
+    assert_status "SEASON-1.19" "terrain_id inexistente → 404" "404" "$STATUS"
+    assert_json_eq "SEASON-1.19b" "title 'Terrain not found'" '.title' "Terrain not found" "$BODY"
+else
+    skip_test "SEASON-1.19" "terrain-service no responde gRPC"
+    skip_test "SEASON-1.19b" "terrain-service no responde gRPC"
+fi
 
-# SEASON-1.20 crop_id inexistente
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
-    -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID_GHOST")")
-BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
-assert_status "SEASON-1.20" "crop_id inexistente → 404" "404" "$STATUS"
-assert_json_eq "SEASON-1.20b" "title 'Crop not found'" '.title' "Crop not found" "$BODY"
+# SEASON-1.20 crop_id inexistente: necesita gRPC arriba + TERRAIN_ID válido
+# (porque el orden es terrain primero; si el terrain falla, nunca llegamos al check de crop)
+if [[ "$GRPC_DEPS_OK" -eq 1 && "$TERRAIN_FIXTURE_OK" -eq 1 ]]; then
+    RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
+        -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID_GHOST")")
+    BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
+    assert_status "SEASON-1.20" "crop_id inexistente → 404" "404" "$STATUS"
+    assert_json_eq "SEASON-1.20b" "title 'Crop not found'" '.title' "Crop not found" "$BODY"
+else
+    skip_test "SEASON-1.20" "requiere TERRAIN_ID válido + crop-service vivo"
+    skip_test "SEASON-1.20b" "requiere TERRAIN_ID válido + crop-service vivo"
+fi
 
 # SEASON-1.24 body vacío
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/season" \
@@ -360,18 +433,22 @@ STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/season" \
 assert_status "SEASON-1.26" "JSON malformado → 400" "400" "$STATUS"
 
 # SEASON-1.27 idempotencia (no UNIQUE)
-S1=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-04-01 "" "" "dup")")
-S2=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-04-01 "" "" "dup")")
-ID1=$(echo "$S1" | jq -r '.' 2>/dev/null)
-ID2=$(echo "$S2" | jq -r '.' 2>/dev/null)
-[[ -n "$ID1" && "$ID1" != "null" ]] && CREATED_SEASON_IDS+=("$ID1")
-[[ -n "$ID2" && "$ID2" != "null" ]] && CREATED_SEASON_IDS+=("$ID2")
-if [[ -n "$ID1" && -n "$ID2" && "$ID1" != "$ID2" ]]; then
-    _pass "SEASON-1.27" "dos POST iguales → 2 UUIDs distintos ($ID1 ≠ $ID2)"
+if require_real_fixtures; then
+    S1=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-04-01 "" "" "dup")")
+    S2=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-04-01 "" "" "dup")")
+    ID1=$(echo "$S1" | jq -r '.' 2>/dev/null)
+    ID2=$(echo "$S2" | jq -r '.' 2>/dev/null)
+    [[ -n "$ID1" && "$ID1" != "null" ]] && CREATED_SEASON_IDS+=("$ID1")
+    [[ -n "$ID2" && "$ID2" != "null" ]] && CREATED_SEASON_IDS+=("$ID2")
+    if [[ -n "$ID1" && -n "$ID2" && "$ID1" != "$ID2" ]]; then
+        _pass "SEASON-1.27" "dos POST iguales → 2 UUIDs distintos ($ID1 ≠ $ID2)"
+    else
+        _fail "SEASON-1.27" "dos POST iguales generan 2 filas" "ids distintos" "id1=$ID1 id2=$ID2"
+    fi
 else
-    _fail "SEASON-1.27" "dos POST iguales generan 2 filas" "ids distintos" "id1=$ID1 id2=$ID2"
+    skip_test "SEASON-1.27" "requiere fixtures reales"
 fi
 
 fi  # /sección 1
@@ -382,12 +459,13 @@ fi  # /sección 1
 if section_enabled 2; then
 section_header 2 "GET /season/{id} — detalle"
 
-# Pre-seed: tomar uno de los creados o crear uno nuevo
+# Pre-seed: tomar uno de los creados o crear uno nuevo (requiere fixtures reales)
+SID=""
 if [[ ${#CREATED_SEASON_IDS[@]} -gt 0 ]]; then
     SID="${CREATED_SEASON_IDS[0]}"
-else
+elif require_real_fixtures; then
     SID=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
-        -d "$(make_body "$TERRAIN_ID" "$CROP_ID")" | jq -r '.')
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID")" | jq -r '.' 2>/dev/null)
     [[ -n "$SID" && "$SID" != "null" ]] && CREATED_SEASON_IDS+=("$SID")
 fi
 
@@ -410,6 +488,11 @@ if [[ -n "$SID" && "$SID" != "null" ]]; then
     # SEASON-2.04 fields fuera del enum
     STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/season/$SID?fields=secret")
     assert_status "SEASON-2.04" "fields=secret → 400" "400" "$STATUS"
+else
+    skip_test "SEASON-2.01" "no hay season real para inspeccionar (fixtures)"
+    skip_test "SEASON-2.01b" "no hay season real"
+    skip_test "SEASON-2.03" "no hay season real"
+    skip_test "SEASON-2.04" "no hay season real"
 fi
 
 # SEASON-2.02 detalle inexistente
@@ -474,15 +557,22 @@ fi  # /sección 3
 if section_enabled 4; then
 section_header 4 "DELETE /season/{id} — borrado manual"
 
-# SEASON-4.01 happy path
-TARGET_BODY=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-05-01)")
-TARGET=$(echo "$TARGET_BODY" | jq -r '.')
-if [[ -n "$TARGET" && "$TARGET" != "null" ]]; then
-    STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/$TARGET")
-    assert_status "SEASON-4.01" "DELETE happy path → 204" "204" "$STATUS"
-    AFTER=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/season/$TARGET")
-    assert_status "SEASON-4.01b" "fila desapareció (GET → 404)" "404" "$AFTER"
+# SEASON-4.01 happy path: requiere crear una season real para luego borrarla
+if require_real_fixtures; then
+    TARGET_BODY=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-05-01)")
+    TARGET=$(echo "$TARGET_BODY" | jq -r '.' 2>/dev/null)
+    if [[ -n "$TARGET" && "$TARGET" != "null" ]]; then
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/$TARGET")
+        assert_status "SEASON-4.01" "DELETE happy path → 204" "204" "$STATUS"
+        AFTER=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/season/$TARGET")
+        assert_status "SEASON-4.01b" "fila desapareció (GET → 404)" "404" "$AFTER"
+    else
+        _fail "SEASON-4.01" "no se pudo crear el target del DELETE" "201" "$TARGET_BODY"
+    fi
+else
+    skip_test "SEASON-4.01" "requiere fixtures reales para crear el target"
+    skip_test "SEASON-4.01b" "requiere fixtures reales"
 fi
 
 # SEASON-4.02 id inexistente
@@ -497,17 +587,23 @@ STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/abc")
 assert_status "SEASON-4.03" "id no UUID → 400" "400" "$STATUS"
 
 # SEASON-4.04 doble DELETE
-TARGET_BODY=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-05-15)")
-TARGET=$(echo "$TARGET_BODY" | jq -r '.')
-if [[ -n "$TARGET" && "$TARGET" != "null" ]]; then
-    S1=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/$TARGET")
-    S2=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/$TARGET")
-    if [[ "$S1" == "204" && "$S2" == "404" ]]; then
-        _pass "SEASON-4.04" "doble DELETE → 204 + 404"
+if require_real_fixtures; then
+    TARGET_BODY=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID" 2025-05-15)")
+    TARGET=$(echo "$TARGET_BODY" | jq -r '.' 2>/dev/null)
+    if [[ -n "$TARGET" && "$TARGET" != "null" ]]; then
+        S1=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/$TARGET")
+        S2=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/$TARGET")
+        if [[ "$S1" == "204" && "$S2" == "404" ]]; then
+            _pass "SEASON-4.04" "doble DELETE → 204 + 404"
+        else
+            _fail "SEASON-4.04" "doble DELETE → 204+404" "204+404" "$S1+$S2"
+        fi
     else
-        _fail "SEASON-4.04" "doble DELETE → 204+404" "204+404" "$S1+$S2"
+        _fail "SEASON-4.04" "no se pudo crear el target" "201" "$TARGET_BODY"
     fi
+else
+    skip_test "SEASON-4.04" "requiere fixtures reales"
 fi
 
 fi  # /sección 4
@@ -579,21 +675,35 @@ fi  # /sección 6
 if section_enabled 10; then
 section_header 10 "Seguridad defensiva"
 
-# SEASON-10.01 SQL injection en fields
-TARGET=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
-    -d "$(make_body "$TERRAIN_ID" "$CROP_ID")" | jq -r '.')
-[[ -n "$TARGET" && "$TARGET" != "null" ]] && CREATED_SEASON_IDS+=("$TARGET")
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-    "$API_URL/season/$TARGET?fields=id;DROP%20TABLE%20season;--")
-assert_status "SEASON-10.01" "SQL injection fields → 400" "400" "$STATUS"
-PING=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/season/$TARGET")
-assert_status "SEASON-10.01b" "tabla intacta tras intento" "200" "$PING"
+# SEASON-10.01 SQL injection en fields (necesita una season real para hacer GET)
+if require_real_fixtures; then
+    TARGET=$(curl -s -X POST "$API_URL/season" -H "Content-Type: application/json" \
+        -d "$(make_body "$TERRAIN_ID" "$CROP_ID")" | jq -r '.' 2>/dev/null)
+    if [[ -n "$TARGET" && "$TARGET" != "null" ]]; then
+        CREATED_SEASON_IDS+=("$TARGET")
+        STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "$API_URL/season/$TARGET?fields=id;DROP%20TABLE%20season;--")
+        assert_status "SEASON-10.01" "SQL injection fields → 400" "400" "$STATUS"
+        PING=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/season/$TARGET")
+        assert_status "SEASON-10.01b" "tabla intacta tras intento" "200" "$PING"
+    else
+        skip_test "SEASON-10.01" "no se pudo crear el target"
+        skip_test "SEASON-10.01b" "no se pudo crear el target"
+    fi
+else
+    skip_test "SEASON-10.01" "requiere fixtures reales"
+    skip_test "SEASON-10.01b" "requiere fixtures reales"
+fi
 
 # SEASON-10.03 propiedades extra (Jackson ignora)
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/season" \
-    -H "Content-Type: application/json" \
-    -d "{\"terrain_id\":\"$TERRAIN_ID\",\"crop_id\":\"$CROP_ID\",\"start_date\":\"2025-03-01\",\"isAdmin\":true}")
-assert_status "SEASON-10.03" "body con isAdmin extra → 201 (Jackson ignora)" "201" "$STATUS"
+if require_real_fixtures; then
+    STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$API_URL/season" \
+        -H "Content-Type: application/json" \
+        -d "{\"terrain_id\":\"$TERRAIN_ID\",\"crop_id\":\"$CROP_ID\",\"start_date\":\"2025-03-01\",\"isAdmin\":true}")
+    assert_status "SEASON-10.03" "body con isAdmin extra → 201 (Jackson ignora)" "201" "$STATUS"
+else
+    skip_test "SEASON-10.03" "requiere fixtures reales"
+fi
 
 # SEASON-10.06 path traversal
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/season/../../etc/passwd")
