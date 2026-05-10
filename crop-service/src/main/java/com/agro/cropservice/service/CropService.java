@@ -1,7 +1,9 @@
 package com.agro.cropservice.service;
 
 import com.agro.cropservice.constants.CropFieldConstants;
+import com.agro.cropservice.dto.CropCreatedResponse;
 import com.agro.cropservice.dto.CropRequest;
+import com.agro.cropservice.exception.CropTypeNotFoundException;
 import com.agro.cropservice.model.CropType;
 import com.agro.cropservice.repository.CropRepository;
 import com.agro.cropservice.utils.FieldsValidator;
@@ -23,7 +25,7 @@ public class CropService {
     public List<?> getCrops(String fields, Integer cropTypeId) {
         String selectedFields = fieldsValidator.validateAndProcess(fields);
         if (cropTypeId != null && !cropRepository.cropTypeExists(cropTypeId)) {
-            throw new IllegalArgumentException(i18nService.getMessage("illegal.croptype.id"));
+            throw new CropTypeNotFoundException(i18nService.getMessage("illegal.croptype.id"));
         }
         return cropRepository.findAllCrops(selectedFields, cropTypeId);
     }
@@ -34,34 +36,26 @@ public class CropService {
     }
 
     @Transactional
-    public String createCrop(CropRequest cropRequest) {
-
-        boolean existsCropType = cropRepository.cropTypeExists(cropRequest.crop_type_id());
-
-        if (!existsCropType) {
-            throw new IllegalArgumentException(i18nService.getMessage("illegal.croptype.id"));
+    public CropCreatedResponse createCrop(CropRequest cropRequest) {
+        if (!cropRepository.cropTypeExists(cropRequest.crop_type_id())) {
+            throw new CropTypeNotFoundException(i18nService.getMessage("illegal.croptype.id"));
         }
 
-        var response = cropRepository.insertCrop(
+        UUID id = cropRepository.insertCrop(
                 cropRequest.name(),
                 cropRequest.description(),
                 cropRequest.crop_type_id()
         );
 
-        if (response > 0) {
-            return i18nService.getMessage("crop.created");
-        }
-
-        return i18nService.getMessage("crop.not.created");
+        return new CropCreatedResponse(
+                id,
+                cropRequest.name(),
+                i18nService.getMessage("crop.created")
+        );
     }
 
     @Transactional
-    public String deleteCrop(UUID id) {
-        var response = cropRepository.deleteCrop(id);
-        if (response > 0) {
-            return i18nService.getMessage("crop.deleted", id);
-        }
-        return i18nService.getMessage("crop.not.deleted", id);
+    public void deleteCrop(UUID id) {
+        cropRepository.deleteCrop(id);
     }
-
 }

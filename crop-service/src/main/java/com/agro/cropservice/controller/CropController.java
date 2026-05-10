@@ -1,5 +1,6 @@
 package com.agro.cropservice.controller;
 
+import com.agro.cropservice.dto.CropCreatedResponse;
 import com.agro.cropservice.dto.CropRequest;
 import com.agro.cropservice.model.CropType;
 import com.agro.cropservice.service.CropService;
@@ -35,22 +36,20 @@ public class CropController {
     }
 
     @PostMapping
-    public ResponseEntity<String> createCrop(
+    public ResponseEntity<CropCreatedResponse> createCrop(
             @Valid @RequestBody CropRequest cropRequest
     ) {
-        var response = cropService.createCrop(cropRequest);
+        CropCreatedResponse response = cropService.createCrop(cropRequest);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteCrop(
+    public ResponseEntity<Void> deleteCrop(
             @PathVariable UUID id
     ) {
-        var response = cropService.deleteCrop(id);
-        return ResponseEntity
-                .status(HttpStatus.NO_CONTENT)
-                .body(response);
+        cropService.deleteCrop(id);
+        return ResponseEntity.noContent().build();
     }
 }

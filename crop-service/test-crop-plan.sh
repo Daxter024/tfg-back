@@ -291,7 +291,7 @@ echo "  crop-service en $API_URL responde con $PING_STATUS al GET /crop. OK."
 if section_enabled 1; then
 section_header 1 "POST /crop — alta de cultivo"
 
-# CROP-1.01 — happy path mínimo
+# CROP-1.01 — happy path mínimo. POST /crop ahora devuelve {id, name, message}.
 NAME_101="$RUN_TAG-1.01"
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" \
@@ -300,15 +300,12 @@ BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
 assert_status "CROP-1.01" "happy path mínimo" "201" "$STATUS"
 [[ "$STATUS" == "201" ]] && CREATED_NAMES+=("$NAME_101")
 
-# CROP-1.01b — la persistencia se verifica por GET inmediato
-ID_101=$(crop_id_by_name "$NAME_101")
-if [[ -n "$ID_101" ]]; then
-    _pass "CROP-1.01b" "fila persistida (id=$ID_101)"
-else
-    _fail "CROP-1.01b" "fila persistida tras POST" "id no vacío" "<vacío>"
-fi
+# CROP-1.01b — el id viene en la respuesta, no hace falta GET adicional
+assert_json_present "CROP-1.01b" "id en respuesta" '.id' "$BODY"
+assert_json_eq "CROP-1.01c" "name en respuesta" '.name' "$NAME_101" "$BODY"
+assert_json_present "CROP-1.01d" "message en respuesta" '.message' "$BODY"
 
-# CROP-1.02 — Accept-Language: en
+# CROP-1.02 — Accept-Language: en (la respuesta JSON trae message en EN)
 NAME_102="$RUN_TAG-1.02"
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" \
@@ -317,12 +314,7 @@ RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
 BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
 assert_status "CROP-1.02" "Accept-Language en → 201" "201" "$STATUS"
 [[ "$STATUS" == "201" ]] && CREATED_NAMES+=("$NAME_102")
-# El body es texto plano (deuda); verificamos que contiene "Crop" en EN.
-if [[ "$BODY" == *"Crop"* ]]; then
-    _pass "CROP-1.02b" "respuesta en inglés contiene 'Crop'"
-else
-    _fail "CROP-1.02b" "respuesta en inglés" "contiene 'Crop'" "$BODY"
-fi
+assert_json_eq "CROP-1.02b" "message traducido a EN" '.message' "Crop created" "$BODY"
 
 # CROP-1.03 — name ausente
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
@@ -352,48 +344,25 @@ RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
     -d "$(make_body 'AB')")
 BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
 assert_status "CROP-1.06" "name < 3 chars → 400" "400" "$STATUS"
-assert_json_contains "CROP-1.06b" "errors menciona name size" '.errors // [] | tostring' "3 y 100" "$BODY"
+assert_json_contains "CROP-1.06b" "errors menciona name size" '.errors // [] | tostring' "3 y 50" "$BODY"
 
-# CROP-1.07 — name > 100 chars
+# CROP-1.07 — name > 50 chars (nuevo borde tras alinear @Size con VARCHAR(50))
+NAME_51CHAR=$(printf 'X%.0s' $(seq 1 51))
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" \
-    -d "$(make_body "$NAME_101CHAR")")
+    -d "$(make_body "$NAME_51CHAR")")
 STATUS="${RESP##*$'\n'}"
-assert_status "CROP-1.07" "name > 100 chars → 400" "400" "$STATUS"
+assert_status "CROP-1.07" "name > 50 chars → 400" "400" "$STATUS"
 
-# CROP-1.08 — borde superior real del campo `name`.
-#
-# OJO: aquí hay un BUG REAL en crop-service:
-#   - DTO CropRequest:  @Size(min=3, max=100)
-#   - V1 SQL:           name VARCHAR(50)
-# Un nombre de 51..100 chars pasa Bean Validation pero rompe el INSERT
-# (value too long for varchar(50)) → 500. Hasta que se decida fix
-# (bajar @Size a 50, o ALTER COLUMN a 100), el borde **realmente
-# funcional** es 50 chars. Probamos ese borde.
+# CROP-1.08 — name = 50 chars exactos (borde superior, alineado con DB)
 NAME_108="$RUN_TAG-$(printf 'X%.0s' $(seq 1 50))"
 NAME_108="${NAME_108:0:50}"   # truncar a 50 chars exactos
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" \
     -d "$(make_body "$NAME_108")")
 STATUS="${RESP##*$'\n'}"
-assert_status "CROP-1.08" "name 50 chars (borde DB real) → 201" "201" "$STATUS"
+assert_status "CROP-1.08" "name 50 chars (borde superior) → 201" "201" "$STATUS"
 [[ "$STATUS" == "201" ]] && CREATED_NAMES+=("$NAME_108")
-
-# CROP-1.08c — confirmación del bug: 51..100 chars pasa @Size pero rompe SQL.
-NAME_108C="$RUN_TAG-$(printf 'Y%.0s' $(seq 1 80))"
-RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
-    -H "Content-Type: application/json" \
-    -d "$(make_body "$NAME_108C")")
-STATUS="${RESP##*$'\n'}"
-# Esperamos 500 hoy (DataIntegrityViolation no manejada) o 400 si se
-# arregla bajando @Size a 50. Documenta la deuda.
-if [[ "$STATUS" == "500" ]]; then
-    _pass "CROP-1.08c" "deuda confirmada: @Size(max=100) vs VARCHAR(50) → 500"
-elif [[ "$STATUS" == "400" ]]; then
-    _pass "CROP-1.08c" "deuda corregida: @Size ahora rechaza > 50 → 400"
-else
-    _fail "CROP-1.08c" "name > 50 chars debe fallar (deuda)" "400 o 500" "$STATUS"
-fi
 
 # CROP-1.09 — description ausente
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
@@ -458,13 +427,13 @@ RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
 STATUS="${RESP##*$'\n'}"
 assert_status "CROP-1.16" "crop_type_id no numérico → 400" "400" "$STATUS"
 
-# CROP-1.17 — crop_type_id inexistente
+# CROP-1.17 — crop_type_id inexistente (nuevo title 'Crop type not found')
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" \
     -d "$(make_body "$RUN_TAG-1.17" "$VALID_DESC" 999)")
 BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
 assert_status "CROP-1.17" "crop_type_id inexistente → 400" "400" "$STATUS"
-assert_json_eq "CROP-1.17b" "title 'No existe ese tipo de cultivo'" '.title' "No existe ese tipo de cultivo" "$BODY"
+assert_json_eq "CROP-1.17b" "title 'Crop type not found'" '.title' "Crop type not found" "$BODY"
 
 # CROP-1.18 — body vacío
 RESP=$(curl -s -w "\n%{http_code}" -X POST "$API_URL/crop" \
@@ -659,7 +628,7 @@ fi
 RESP=$(curl -s -w "\n%{http_code}" "$API_URL/crop?crop_type_id=999")
 BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
 assert_status "CROP-2.14" "crop_type_id=999 → 400" "400" "$STATUS"
-assert_json_eq "CROP-2.14b" "title 'No existe ese tipo de cultivo'" '.title' "No existe ese tipo de cultivo" "$BODY"
+assert_json_eq "CROP-2.14b" "title 'Crop type not found'" '.title' "Crop type not found" "$BODY"
 
 # CROP-2.15 — crop_type_id = 0
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$API_URL/crop?crop_type_id=0")
@@ -777,16 +746,15 @@ fi
 STATUS=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/crop/abc")
 assert_status "CROP-4.02" "id no UUID → 400" "400" "$STATUS"
 
-# CROP-4.03 — id UUID válido pero inexistente
+# CROP-4.03 — UUID válido pero inexistente → 404 'Crop not found'
 RANDOM_UUID=$(uuidgen 2>/dev/null || cat /proc/sys/kernel/random/uuid)
 RESP=$(curl -s -w "\n%{http_code}" -X DELETE "$API_URL/crop/$RANDOM_UUID")
 BODY="${RESP%$'\n'*}"; STATUS="${RESP##*$'\n'}"
-assert_status "CROP-4.03" "UUID inexistente → 400" "400" "$STATUS"
-# El handler hoy pone 'No existe ese tipo de cultivo' (mensaje incorrecto, deuda 4.A)
-assert_json_contains "CROP-4.03b" "title contiene 'No existe' (incorrecto, deuda 4.A)" \
-    '.title' "No existe" "$BODY"
+assert_status "CROP-4.03" "UUID inexistente → 404" "404" "$STATUS"
+assert_json_eq "CROP-4.03b" "title 'Crop not found'" '.title' "Crop not found" "$BODY"
+assert_json_contains "CROP-4.03c" "detail menciona el id" '.detail' "$RANDOM_UUID" "$BODY"
 
-# CROP-4.04 — doble DELETE
+# CROP-4.04 — doble DELETE: primer 204, segundo 404 (tras el fix atómico)
 NAME_404="$RUN_TAG-4.04-double"
 curl -s -o /dev/null -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" -d "$(make_body "$NAME_404")"
@@ -794,10 +762,10 @@ ID_404=$(crop_id_by_name "$NAME_404")
 if [[ -n "$ID_404" ]]; then
     S1=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/crop/$ID_404")
     S2=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "$API_URL/crop/$ID_404")
-    if [[ "$S1" == "204" && "$S2" == "400" ]]; then
-        _pass "CROP-4.04" "doble DELETE → 204 + 400"
+    if [[ "$S1" == "204" && "$S2" == "404" ]]; then
+        _pass "CROP-4.04" "doble DELETE → 204 + 404"
     else
-        _fail "CROP-4.04" "doble DELETE → 204+400" "204+400" "$S1+$S2"
+        _fail "CROP-4.04" "doble DELETE → 204+404" "204+404" "$S1+$S2"
     fi
 else
     skip_test "CROP-4.04" "no se pudo crear el crop"
@@ -805,13 +773,10 @@ fi
 
 # CROP-4.05 — DELETE concurrente sobre el mismo id.
 #
-# BUG REAL conocido (TOCTOU): el repo hace cropExists() seguido de
-# DELETE en operaciones separadas, y el controller siempre devuelve
-# 204 (no mira el rowcount). Resultado: dos DELETE concurrentes
-# devuelven ambos 204 y la fila se borra una vez.
-# La invariante REAL que debemos verificar es: al menos uno responde
-# OK y la fila ya no existe al final. Cualquier combinación de
-# {204,204}, {204,400}, {400,204} es aceptable hoy.
+# Tras el fix atómico (DELETE WHERE id = ? en una sola sentencia y
+# 404 si rowcount=0), las dos peticiones concurrentes deben dar
+# {204, 404} en cualquier orden. Si ambas devuelven 204 hay un nuevo
+# bug (significa que el INSERT del run anterior no se borró).
 NAME_405="$RUN_TAG-4.05-race"
 curl -s -o /dev/null -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" -d "$(make_body "$NAME_405")"
@@ -826,36 +791,27 @@ if [[ -n "$ID_405" ]]; then
     S1=$(cat "$R1"); S2=$(cat "$R2")
     rm -f "$R1" "$R2"
     AFTER=$(crop_id_by_name "$NAME_405")
-    OK_STATUSES=0
-    [[ "$S1" == "204" || "$S1" == "400" ]] && OK_STATUSES=$((OK_STATUSES + 1))
-    [[ "$S2" == "204" || "$S2" == "400" ]] && OK_STATUSES=$((OK_STATUSES + 1))
-    if [[ "$OK_STATUSES" == "2" && -z "$AFTER" ]]; then
-        # Sub-distinguir si el TOCTOU se manifestó (ambos 204) o no.
-        if [[ "$S1" == "204" && "$S2" == "204" ]]; then
-            _pass "CROP-4.05" "DELETE concurrente: ambos 204 (TOCTOU conocido), fila borrada"
-        else
-            _pass "CROP-4.05" "DELETE concurrente: {$S1,$S2}, fila borrada"
-        fi
+    if { [[ "$S1" == "204" && "$S2" == "404" ]] || [[ "$S1" == "404" && "$S2" == "204" ]]; } && [[ -z "$AFTER" ]]; then
+        _pass "CROP-4.05" "DELETE concurrente: uno 204, otro 404, fila borrada"
     else
-        _fail "CROP-4.05" "DELETE concurrente OK + fila borrada" \
-            "statuses ∈ {204,400} y fila ausente" \
-            "{$S1,$S2} y after='$AFTER'"
+        _fail "CROP-4.05" "DELETE concurrente {204,404}" \
+            "{204,404} y fila ausente" "{$S1,$S2} y after='$AFTER'"
     fi
 else
     skip_test "CROP-4.05" "no se pudo crear el crop"
 fi
 
-# CROP-4.06 — 204 con body (deuda 7)
-NAME_406="$RUN_TAG-4.06-204body"
+# CROP-4.06 — DELETE devuelve 204 sin body (deuda nº 7 corregida)
+NAME_406="$RUN_TAG-4.06-nobody"
 curl -s -o /dev/null -X POST "$API_URL/crop" \
     -H "Content-Type: application/json" -d "$(make_body "$NAME_406")"
 ID_406=$(crop_id_by_name "$NAME_406")
 if [[ -n "$ID_406" ]]; then
     BODY=$(curl -s -X DELETE "$API_URL/crop/$ID_406")
-    if [[ -n "$BODY" ]]; then
-        _pass "CROP-4.06" "204 con body (deuda nº 7 confirmada): '$BODY'"
+    if [[ -z "$BODY" ]]; then
+        _pass "CROP-4.06" "DELETE 204 sin body"
     else
-        _pass "CROP-4.06" "204 sin body (deuda corregida)"
+        _fail "CROP-4.06" "DELETE 204 sin body" "<vacío>" "'$BODY'"
     fi
 else
     skip_test "CROP-4.06" "no se pudo crear el crop"

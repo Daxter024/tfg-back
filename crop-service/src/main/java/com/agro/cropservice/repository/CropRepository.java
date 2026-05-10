@@ -1,6 +1,6 @@
 package com.agro.cropservice.repository;
 
-import com.agro.cropservice.dto.CropDetailsDTO;
+import com.agro.cropservice.exception.CropNotFoundException;
 import com.agro.cropservice.exception.IntegrityViolationException;
 import com.agro.cropservice.model.Crop;
 import com.agro.cropservice.model.CropType;
@@ -32,18 +32,9 @@ public class CropRepository {
                     rs.getInt("crop_type_id")
             );
 
-    private final RowMapper<CropDetailsDTO> cropDetailsMapper =
-            (rs, rowNum) -> new CropDetailsDTO(
-                    rs.getObject("id", UUID.class),
-                    rs.getString("name"),
-                    rs.getString("description"),
-                    rs.getInt("crop_type_id"),
-                    rs.getString("crop_type_name")
-            );
-
-    public int insertCrop(String name, String description, Integer crop_type_id) {
-        String sql = "INSERT INTO crop (name, description, crop_type_id) VALUES (?, ?, ?)";
-        return jdbcTemplate.update(sql, name, description, crop_type_id);
+    public UUID insertCrop(String name, String description, Integer crop_type_id) {
+        String sql = "INSERT INTO crop (name, description, crop_type_id) VALUES (?, ?, ?) RETURNING id";
+        return jdbcTemplate.queryForObject(sql, UUID.class, name, description, crop_type_id);
     }
 
     public boolean cropTypeExists(Integer crop_type_id) {
@@ -86,21 +77,6 @@ public class CropRepository {
         return jdbcTemplate.query(sql, cropTypeMapper);
     }
 
-    public List<CropDetailsDTO> findAllCropDetails() {
-        String sql = """
-                SELECT
-                    c.id,
-                    c.name,
-                    c.description,
-                    c.crop_type_id
-                    ct.name AS crop_type_name
-                FROM crop c
-                INNER JOIN
-                    croptype ct ON c.crop_type_id = ct.id
-                """;
-        return jdbcTemplate.query(sql, cropDetailsMapper);
-    }
-
     public int deleteCropType(Integer cropTypeId) {
         List<String> cropNames = jdbcTemplate.queryForList(
                 "SELECT name FROM crop WHERE crop_type_id = ?",
@@ -117,13 +93,17 @@ public class CropRepository {
         return jdbcTemplate.update("DELETE FROM crop_type WHERE id = ?", cropTypeId);
     }
 
-    public int deleteCrop(UUID id) {
-        Boolean exists = cropExists(id);
-        if (!exists) {
-            throw new IllegalArgumentException("crop not found");
-        }
-
+    /**
+     * Atomic delete. Single statement: PostgreSQL guarantees only one of N
+     * concurrent DELETEs over the same id will report rowcount=1; the rest
+     * see rowcount=0. We use that to translate "not found" → 404 without a
+     * separate cropExists() check (eliminates the previous TOCTOU).
+     */
+    public void deleteCrop(UUID id) {
         String sql = "DELETE FROM crop WHERE id = ?";
-        return jdbcTemplate.update(sql, id);
+        int rows = jdbcTemplate.update(sql, id);
+        if (rows == 0) {
+            throw new CropNotFoundException(i18nService.getMessage("crop.notfound", id));
+        }
     }
 }
