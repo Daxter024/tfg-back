@@ -51,12 +51,31 @@ public class GlobalExceptionHandler {
                 .body(problemDetail);
     }
 
+    @ExceptionHandler(CropTypeNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleCropTypeNotFoundException(CropTypeNotFoundException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Crop type not found");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(CropNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleCropNotFoundException(CropNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Crop not found");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ProblemDetail> handleIllegalArgumentException(IllegalArgumentException ex) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
-
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
-        problemDetail.setTitle("No existe ese tipo de cultivo");
+        problemDetail.setTitle("Invalid argument");
         return ResponseEntity
                 .status(status)
                 .body(problemDetail);

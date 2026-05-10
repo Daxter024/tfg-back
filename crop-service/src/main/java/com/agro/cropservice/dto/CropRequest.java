@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 public record CropRequest(
         @NotBlank(message = "{name.notblank}")
-        @Size(min = 3, max = 100, message = "{name.size}")
+        @Size(min = 3, max = 50, message = "{name.size}")
         String name,
         @NotBlank(message = "{description.notblank}")
         @Size(min = 10, max = 500, message = "{description.size}")
