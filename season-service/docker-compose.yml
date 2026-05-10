@@ -1,3 +1,9 @@
+####
+## Move to root directory in the future
+##
+## Change db credentials for production
+####
+
 services:
   season-db:
     image: postgres:14
@@ -10,12 +16,15 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - db_season_data:/var/lib/postgresql/data
+    networks:
+      - default
+      - agro-net
 
   season-service:
     build: .
     container_name: season-service
     ports:
-      - "8082:8082"
+      - "8084:8084"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_URL=jdbc:postgresql://season-db:5432/season_db
@@ -24,6 +33,14 @@ services:
       - SERVER_PORT=8084
     depends_on:
       - season-db
+    restart: always
+    networks:
+      - default
+      - agro-net
 
 volumes:
   db_season_data:
+
+networks:
+  agro-net:
+    external: true
