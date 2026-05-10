@@ -21,9 +21,10 @@ public class CropController {
 
     @GetMapping
     public ResponseEntity<List<?>> getCrops(
-            @RequestParam(required = false) String fields
+            @RequestParam(required = false) String fields,
+            @RequestParam(required = false) Integer crop_type_id
     ) {
-        var response = cropService.getCrops(fields);
+        var response = cropService.getCrops(fields, crop_type_id);
         return ResponseEntity.ok(response);
     }
 
