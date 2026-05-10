@@ -50,4 +50,34 @@ public class GlobalExceptionHandler {
                 .status(status)
                 .body(problemDetail);
     }
+
+    @ExceptionHandler(TerrainNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleTerrainNotFoundException(TerrainNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Terrain not found");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(CropNotFoundException.class)
+    public ResponseEntity<ProblemDetail> handleCropNotFoundException(CropNotFoundException ex) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Crop not found");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ProblemDetail> handleIllegalArgumentException(IllegalArgumentException ex) {
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(status, ex.getMessage());
+        problemDetail.setTitle("Invalid argument");
+        return ResponseEntity
+                .status(status)
+                .body(problemDetail);
+    }
 }
