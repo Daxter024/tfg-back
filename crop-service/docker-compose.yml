@@ -1,3 +1,9 @@
+####
+## Move to root directory in the future
+##
+## Change db credentials for production
+####
+
 services:
   crop-db:
     image: postgres:14
@@ -10,20 +16,32 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - db_crop_data:/var/lib/postgresql/data
+    networks:
+      - default
+      - agro-net
 
   crop-service:
     build: .
     container_name: crop-service
     ports:
       - "8081:8081"
+      - "9094:9094"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - DB_URL=jdbc:postgresql://crop-db:5432/crop_db
       - DB_USER=postgres
       - DB_PASSWORD=postgres
-      - SERVER_PORT=8083
+      - SERVER_PORT=8081
     depends_on:
       - crop-db
+    restart: always
+    networks:
+      - default
+      - agro-net
 
 volumes:
   db_crop_data:
+
+networks:
+  agro-net:
+    external: true
