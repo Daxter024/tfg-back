@@ -20,9 +20,12 @@ public class CropService {
     private final I18nService i18nService;
 
     @Transactional(readOnly = true)
-    public List<?> getCrops(String fields) {
+    public List<?> getCrops(String fields, Integer cropTypeId) {
         String selectedFields = fieldsValidator.validateAndProcess(fields);
-        return cropRepository.findAllCrops(selectedFields);
+        if (cropTypeId != null && !cropRepository.cropTypeExists(cropTypeId)) {
+            throw new IllegalArgumentException(i18nService.getMessage("illegal.croptype.id"));
+        }
+        return cropRepository.findAllCrops(selectedFields, cropTypeId);
     }
 
     @Transactional(readOnly = true)

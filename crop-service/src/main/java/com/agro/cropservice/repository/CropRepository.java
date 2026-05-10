@@ -69,8 +69,16 @@ public class CropRepository {
     }
 
     public List<Map<String, Object>> findAllCrops(String fields) {
-        String sql = "SELECT " + fields + " FROM crop";
-        return jdbcTemplate.queryForList(sql);
+        return findAllCrops(fields, null);
+    }
+
+    public List<Map<String, Object>> findAllCrops(String fields, Integer cropTypeId) {
+        if (cropTypeId == null) {
+            String sql = "SELECT " + fields + " FROM crop";
+            return jdbcTemplate.queryForList(sql);
+        }
+        String sql = "SELECT " + fields + " FROM crop WHERE crop_type_id = ?";
+        return jdbcTemplate.queryForList(sql, cropTypeId);
     }
 
     public List<CropType> findAllCropTypes() {
