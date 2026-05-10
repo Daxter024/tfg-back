@@ -67,20 +67,14 @@
 
 ---
 
-## 3. ⚠ Aclaración sobre una contradicción aparente
+## 3. Aclaración (confirmada por el usuario)
 
-Tu descripción incluye literalmente:
-
-> *"Esta claro que si se elimina un terreno todas aquellas temporadas asociadas se eliminan, borrado en cascada, … **y si un terreno se elimina no quiero que afecte a la season**"*
-
-Las dos frases dicen lo opuesto sobre el borrado de un terreno. Por el contexto (mencionas justo después la validación síncrona del **cultivo** vía gRPC y el resto de la frase distingue claramente "terreno" y "cultivo"), interpreto que **la segunda mención de "terreno" es un typo y debería ser "cultivo"**. Es decir:
+La descripción del usuario tenía un typo en una de las frases — la segunda mención de "terreno" era en realidad **"cultivo"**. Confirmado en el chat por el usuario el 2026-05-10. Por tanto:
 
 - ✅ **Borrar un terreno** → cascada a las seasons (vía Kafka). Coherente con R4.
 - ✅ **Borrar un cultivo** → **NO afecta** a las seasons. Coherente con R5.
 
-Esto **además** es lo que **ya hace el código actual**, así que la interpretación es consistente con la realidad.
-
-> **Si esta interpretación es incorrecta**, párate aquí y avisa. El resto del plan asume que es la correcta.
+Esto coincide con el comportamiento del código actual.
 
 **Justificación de R5 (no propagar borrado de cultivo):** `crop` es un catálogo global. Las temporadas son **registros históricos** ("sembramos `Trigo blando` en este terreno en 2024"). Si un día borras el cultivo del catálogo, las temporadas no deberían desaparecer; conservan el `crop_id` aunque ya no resuelva contra una fila. Esto es exactamente el comportamiento que un sistema agrícola normativo (RD 1311/2012, Cuaderno de Explotación) exige.
 
