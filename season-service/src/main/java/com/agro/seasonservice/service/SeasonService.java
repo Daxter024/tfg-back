@@ -2,10 +2,12 @@ package com.agro.seasonservice.service;
 
 import com.agro.seasonservice.constants.SeasonField;
 import com.agro.seasonservice.dto.SeasonRequest;
+import com.agro.seasonservice.exception.CropNotFoundException;
+import com.agro.seasonservice.exception.TerrainNotFoundException;
+import com.agro.seasonservice.grpc.CropGrpcClient;
+import com.agro.seasonservice.grpc.TerrainGrpcClient;
 import com.agro.seasonservice.repository.SeasonRepository;
 import com.agro.seasonservice.utils.FieldsValidator;
-import com.agro.seasonservice.grpc.TerrainGrpcClient;
-import com.agro.seasonservice.grpc.CropGrpcClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ public class SeasonService {
     private final FieldsValidator fieldsValidator;
     private final TerrainGrpcClient terrainGrpcClient;
     private final CropGrpcClient cropGrpcClient;
+    private final I18nService i18nService;
 
     @Transactional(readOnly = true)
     public Object getSeason(UUID id, List<SeasonField> fields) {
@@ -38,10 +41,12 @@ public class SeasonService {
     @Transactional
     public UUID createSeason(SeasonRequest request) {
         if (!terrainGrpcClient.checkTerrainExists(request.terrain_id())) {
-            throw new IllegalArgumentException("Terrain with id " + request.terrain_id() + " does not exist");
+            throw new TerrainNotFoundException(
+                    i18nService.getMessage("season.terrain.notfound", request.terrain_id()));
         }
         if (!cropGrpcClient.checkCropExists(request.crop_id())) {
-            throw new IllegalArgumentException("Crop with id " + request.crop_id() + " does not exist");
+            throw new CropNotFoundException(
+                    i18nService.getMessage("season.crop.notfound", request.crop_id()));
         }
         return seasonRepository.createSeason(request);
     }
