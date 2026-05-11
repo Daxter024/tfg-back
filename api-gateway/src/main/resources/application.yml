@@ -115,6 +115,36 @@ spring:
                 name: inputService
                 fallbackUri: forward:/fallback/input
                 statusCodes: 500,502,503,504,505
+
+        # iot-service admin paths (sensor / threshold / alert) — JWT required.
+        - id: iot-sensor-route
+          uri: ${IOT_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/sensor/**,/api/threshold/**,/api/alert/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+            - name: CircuitBreaker
+              args:
+                name: iotService
+                fallbackUri: forward:/fallback/iot
+                statusCodes: 500,502,503,504,505
+
+        # Device ingest path — NO JwtValidation. Devices authenticate inside
+        # iot-service via the X-Device-Key header against BCrypt hashes
+        # (DeviceKeyAuthFilter). This is a deliberate exception to the
+        # MICROSERVICES-RELATIONSHIPS §5.3 default — documented in plan §13.
+        - id: iot-ingest-route
+          uri: ${IOT_SERVICE_URL:http://localhost:8086}
+          predicates:
+            - Path=/api/ingest/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: iotIngest
+                fallbackUri: forward:/fallback/iot
+                statusCodes: 500,502,503,504,505
 # For newer versions
 #  cloud:
 #    gateway:

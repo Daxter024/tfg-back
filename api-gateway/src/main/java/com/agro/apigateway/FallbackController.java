@@ -43,6 +43,11 @@ public class FallbackController {
         return createFallbackResponse("input", "input-service");
     }
 
+    @RequestMapping("/iot")
+    public Mono<ResponseEntity<Map<String, Object>>> iotFallback() {
+        return createFallbackResponse("iot", "iot-service");
+    }
+
     private Mono<ResponseEntity<Map<String, Object>>> createFallbackResponse(String serviceName, String headerServiceName) {
         Map<String, Object> response = Map.of(
                 "status", "SERVICE_UNAVAILABLE",
