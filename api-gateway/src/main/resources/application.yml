@@ -76,6 +76,32 @@ spring:
                 name: terrainService
                 fallbackUri: forward:/fallback/terrain
                 statusCodes: 500,502,503,504,505
+
+        - id: task-service
+          uri: ${TASK_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/task/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+            - name: CircuitBreaker
+              args:
+                name: taskService
+                fallbackUri: forward:/fallback/task
+                statusCodes: 500,502,503,504,505
+
+        - id: notification-service-route
+          uri: ${TASK_SERVICE_URL:http://localhost:8084}
+          predicates:
+            - Path=/api/notification/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+            - name: CircuitBreaker
+              args:
+                name: notificationService
+                fallbackUri: forward:/fallback/task
+                statusCodes: 500,502,503,504,505
 # For newer versions
 #  cloud:
 #    gateway:
