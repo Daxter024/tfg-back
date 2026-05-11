@@ -97,6 +97,18 @@ public class TerrainRepository {
         return count != null && count > 0;
     }
 
+    /**
+     * Devuelve el {@code user_id} dueño del terreno, o vacío si no existe.
+     * Sirve para resolver {@code CheckTerrainOwnership} sin un SELECT extra.
+     */
+    public java.util.Optional<UUID> findOwnerById(UUID id) {
+        String sql = "SELECT user_id FROM terrain WHERE id = ?";
+        return jdbcTemplate.query(sql,
+                rs -> rs.next() ? java.util.Optional.of(UUID.fromString(rs.getString("user_id")))
+                                : java.util.Optional.<UUID>empty(),
+                id);
+    }
+
     public List<UUID> findIdsByUserId(UUID userId) {
         String sql = "SELECT id FROM terrain WHERE user_id = ?";
         return jdbcTemplate.query(sql, (rs, rowNum) -> UUID.fromString(rs.getString("id")), userId);
