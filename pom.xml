@@ -21,6 +21,7 @@
         <module>api-gateway</module>
         <module>task-service</module>
         <module>input-service</module>
+        <module>iot-service</module>
     </modules>
 
     <properties>
