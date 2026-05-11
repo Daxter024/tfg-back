@@ -38,6 +38,11 @@ public class FallbackController {
         return createFallbackResponse("task", "task-service");
     }
 
+    @RequestMapping("/input")
+    public Mono<ResponseEntity<Map<String, Object>>> inputFallback() {
+        return createFallbackResponse("input", "input-service");
+    }
+
     private Mono<ResponseEntity<Map<String, Object>>> createFallbackResponse(String serviceName, String headerServiceName) {
         Map<String, Object> response = Map.of(
                 "status", "SERVICE_UNAVAILABLE",
