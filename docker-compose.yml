@@ -19,19 +19,29 @@ services:
       - task-service
 
   kafka:
-    image: bitnami/kafka:3.7
+    # bitnami/kafka images stopped being publicly hosted in 2025 — switched to
+    # the official apache/kafka image (KRaft mode, no Zookeeper). The
+    # KAFKA_CFG_* sintaxis bitnami se sustituye por KAFKA_* nativa.
+    image: apache/kafka:3.8.0
     container_name: kafka
     ports:
       - "9092:9092"
     environment:
-      - KAFKA_CFG_NODE_ID=0
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
-      - ALLOW_PLAINTEXT_LISTENER=yes
+      KAFKA_NODE_ID: 0
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 0@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Topic auto-creation = on para que productores en cold-start puedan
+      # empezar a publicar sin pre-crear topics manualmente.
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Tuning de replica para single-node dev (default 3 generaria warnings).
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
 
   terrain-db:
     image: postgis/postgis:15-3.5
@@ -177,6 +187,35 @@ services:
       - auth-service
       - terrain-service
 
+  input-db:
+    image: postgres:14
+    container_name: input-db
+    ports:
+      - "5437:5432"
+    environment:
+      POSTGRES_DB: input_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_input_data:/var/lib/postgresql/data
+
+  input-service:
+    build: ./input-service
+    container_name: input-service
+    ports:
+      - "8085:8085"
+      - "9096:9096"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8085
+      - DB_URL=jdbc:postgresql://input-db:5432/input_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - input-db
+      - kafka
+
 volumes:
   db_terrain_data:
   db_crop_data:
@@ -184,3 +223,4 @@ volumes:
   db_auth_data:
   db_task_data:
   task_attachments:
+  db_input_data:
