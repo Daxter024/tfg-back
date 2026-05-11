@@ -18,7 +18,7 @@ CREATE TABLE task (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   task_type_id INTEGER NOT NULL REFERENCES task_type(id),
 
-  -- Unica referencia geografica: terrain_id (parcels NO existen, decision D1+sin-parcels)
+  -- Unica referencia geografica: terrain_id (no hay sub-divisiones del terreno)
   terrain_id UUID NOT NULL,
 
   -- Planificacion

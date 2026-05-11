@@ -11,8 +11,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Cuerpo de {@code POST /task}. {@code terrain_id} es obligatorio (no hay
- * parcels en main; decision documentada en LLM-WORK/04-task-service-from-main).
+ * Cuerpo de {@code POST /task}. {@code terrain_id} es obligatorio — es la
+ * unica referencia geografica del dominio (decision documentada en
+ * LLM-WORK/04-task-service-from-main, no hay sub-divisiones de terreno).
  */
 public record TaskRequest(
         @NotBlank(message = "{task.type.required}")
