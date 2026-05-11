@@ -164,6 +164,76 @@ public class TaskRepository {
                 Timestamp.valueOf(changedAt), note);
     }
 
+    /* ---------------------------- dashboard --------------------------- */
+
+    /**
+     * Devuelve totales por estado (PENDING, IN_PROGRESS, FINISHED, CANCELLED)
+     * + un sintetico OVERDUE para tareas vencidas. Acepta los mismos filtros
+     * que el listado (sobre todo {@code terrainIdIn} para role scoping).
+     */
+    public Map<String, Long> totalsByState(TaskFilters f) {
+        String base = "SELECT t.state AS state, COUNT(*) AS c FROM task t LEFT JOIN task_type tt ON tt.id = t.task_type_id";
+        QueryBuild qb = buildFilteredQuery(base, f);
+        String sql = qb.sql() + " GROUP BY t.state";
+        Map<String, Long> totals = new java.util.LinkedHashMap<>();
+        for (String s : List.of("PENDING", "IN_PROGRESS", "FINISHED", "CANCELLED")) {
+            totals.put(s, 0L);
+        }
+        for (Map<String, Object> row : jdbcTemplate.queryForList(sql, qb.params().toArray())) {
+            totals.put((String) row.get("state"), ((Number) row.get("c")).longValue());
+        }
+        QueryBuild overdueQb = buildFilteredQuery(
+                "SELECT COUNT(*) FROM task t LEFT JOIN task_type tt ON tt.id = t.task_type_id",
+                new TaskFilters(f == null ? null : f.assignedTo(),
+                        f == null ? null : f.createdBy(),
+                        null, f == null ? null : f.typeCodes(),
+                        f == null ? null : f.terrainId(),
+                        f == null ? null : f.from(),
+                        f == null ? null : f.to(),
+                        Boolean.TRUE,
+                        f == null ? null : f.terrainIdIn()));
+        Long overdue = jdbcTemplate.queryForObject(overdueQb.sql(), Long.class, overdueQb.params().toArray());
+        totals.put("OVERDUE", overdue == null ? 0L : overdue);
+        return totals;
+    }
+
+    public List<Map<String, Object>> countsByWeek(TaskFilters f) {
+        String base = """
+                SELECT date_trunc('week', t.planned_at)::date AS week_start, COUNT(*) AS c
+                  FROM task t LEFT JOIN task_type tt ON tt.id = t.task_type_id
+                """;
+        QueryBuild qb = buildFilteredQuery(base, f);
+        return jdbcTemplate.queryForList(
+                qb.sql() + " GROUP BY 1 ORDER BY 1",
+                qb.params().toArray());
+    }
+
+    public List<Map<String, Object>> countsByType(TaskFilters f) {
+        String base = """
+                SELECT tt.code AS task_type_code, COUNT(*) AS c
+                  FROM task t LEFT JOIN task_type tt ON tt.id = t.task_type_id
+                """;
+        QueryBuild qb = buildFilteredQuery(base, f);
+        return jdbcTemplate.queryForList(
+                qb.sql() + " GROUP BY 1 ORDER BY 2 DESC",
+                qb.params().toArray());
+    }
+
+    /* ----------------------------- export ----------------------------- */
+
+    /** Stream de filas para exportar a CSV. Reusa los filtros del listado. */
+    public void streamForExport(TaskFilters f, org.springframework.jdbc.core.RowCallbackHandler handler) {
+        String base = """
+                SELECT t.id, tt.code AS task_type_code, t.terrain_id, t.planned_at,
+                       t.state, t.started_at, t.finished_at, t.real_duration_minutes,
+                       t.assigned_to, t.created_by
+                  FROM task t
+                  LEFT JOIN task_type tt ON tt.id = t.task_type_id
+                """;
+        QueryBuild qb = buildFilteredQuery(base, f);
+        jdbcTemplate.query(qb.sql() + " ORDER BY t.planned_at DESC", qb.params().toArray(), handler);
+    }
+
     /* --------------------- D2 user-deleted policy ---------------------- */
 
     public int deleteByUserIdAndStateIn(UUID userId, Collection<String> states) {
