@@ -1,0 +1,55 @@
+####
+## Compose standalone para iot-service.
+##
+## Asume que la red externa `agro-net` ya existe y que `kafka` esta
+## corriendo en ella (lo levanta el compose raiz o el de task-service).
+##
+## Crear la red si no existe:
+##   docker network create agro-net
+##
+## D3: la base sigue siendo postgres:14 vainilla. Para activar Timescale,
+## cambiar la imagen a `timescale/timescaledb:2.14.2-pg14` y promover el
+## template en `src/main/resources/db/migration-disabled/`.
+####
+
+services:
+  iot-db:
+    image: postgres:14
+    container_name: iot-db
+    ports:
+      - "5438:5432"
+    environment:
+      POSTGRES_DB: iot_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_iot_data:/var/lib/postgresql/data
+    networks:
+      - default
+      - agro-net
+
+  iot-service:
+    build: .
+    container_name: iot-service
+    ports:
+      - "8086:8086"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8086
+      - DB_URL=jdbc:postgresql://iot-db:5432/iot_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - iot-db
+    restart: always
+    networks:
+      - default
+      - agro-net
+
+volumes:
+  db_iot_data:
+
+networks:
+  agro-net:
+    external: true
