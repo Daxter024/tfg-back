@@ -1,0 +1,60 @@
+-- =====================================================================
+-- OPTIONAL MIGRATION — DO NOT ACTIVATE BY DEFAULT
+--
+-- v1 of iot-service runs on vanilla postgres:14 (plan decision D3). When
+-- the TFG load grows past what plain SQL views can keep up with, swap to
+-- TimescaleDB:
+--
+--   1) Change iot-db image in docker-compose.yml to
+--      `timescale/timescaledb:2.14.2-pg14`.
+--   2) Rename this file to `V3__migrate_to_timescaledb.sql` and MOVE it
+--      to `db/migration/` (the active Flyway directory).
+--   3) Restart iot-service. Flyway picks up V3 automatically.
+--
+-- This file is intentionally located outside Flyway's classpath
+-- (`db/migration-disabled/`) so it is NEVER executed during regular boot.
+-- =====================================================================
+
+CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+-- 1. Convert sensor_reading into a hypertable, preserving existing rows.
+SELECT create_hypertable('sensor_reading', 'recorded_at',
+    chunk_time_interval => INTERVAL '7 days',
+    migrate_data => TRUE);
+
+-- 2. Replace plain views with continuous aggregates.
+DROP VIEW IF EXISTS sensor_reading_hourly;
+DROP VIEW IF EXISTS sensor_reading_daily;
+
+CREATE MATERIALIZED VIEW sensor_reading_hourly
+WITH (timescaledb.continuous) AS
+SELECT sensor_id,
+       time_bucket('1 hour', recorded_at) AS bucket,
+       AVG(value) AS avg_value, MIN(value) AS min_value, MAX(value) AS max_value,
+       COUNT(*) AS samples
+  FROM sensor_reading
+ GROUP BY sensor_id, bucket
+WITH NO DATA;
+
+CREATE MATERIALIZED VIEW sensor_reading_daily
+WITH (timescaledb.continuous) AS
+SELECT sensor_id,
+       time_bucket('1 day', recorded_at) AS bucket,
+       AVG(value) AS avg_value, MIN(value) AS min_value, MAX(value) AS max_value,
+       COUNT(*) AS samples
+  FROM sensor_reading
+ GROUP BY sensor_id, bucket
+WITH NO DATA;
+
+CALL refresh_continuous_aggregate('sensor_reading_hourly', NULL, NULL);
+CALL refresh_continuous_aggregate('sensor_reading_daily',  NULL, NULL);
+
+SELECT add_continuous_aggregate_policy('sensor_reading_hourly',
+    start_offset => INTERVAL '7 days',
+    end_offset   => INTERVAL '1 hour',
+    schedule_interval => INTERVAL '15 minutes');
+
+SELECT add_continuous_aggregate_policy('sensor_reading_daily',
+    start_offset => INTERVAL '30 days',
+    end_offset   => INTERVAL '1 day',
+    schedule_interval => INTERVAL '1 hour');
