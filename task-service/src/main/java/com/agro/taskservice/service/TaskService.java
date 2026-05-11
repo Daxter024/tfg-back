@@ -161,6 +161,31 @@ public class TaskService {
         return taskRepository.deleteByTerrainId(terrainId);
     }
 
+    /**
+     * Politica D2 — al recibir {@code user-deleted}:
+     * <ul>
+     *   <li>Borrar fisicamente tareas en {@code PENDING}, {@code IN_PROGRESS}
+     *       o {@code CANCELLED} donde el user es creator o assignee.</li>
+     *   <li>Anonymizar (sustituir por {@link #DELETED_USER_PLACEHOLDER}) las
+     *       tareas {@code FINISHED} donde el user es assignee.</li>
+     *   <li>Idem para creator.</li>
+     * </ul>
+     * No anonymizamos {@code task_state_history.changed_by} — es traza de
+     * auditoria y el user ya no existe, pero la fila se conserva como prueba
+     * de actividad pasada.
+     */
+    @Transactional
+    public UserDeletedSummary handleUserDeleted(UUID userId) {
+        int deleted = taskRepository.deleteByUserIdAndStateIn(userId,
+                List.of("PENDING", "IN_PROGRESS", "CANCELLED"));
+        int anonAssignee = taskRepository.anonymizeAssigneeForFinished(userId, DELETED_USER_PLACEHOLDER);
+        int anonCreator = taskRepository.anonymizeCreatorForFinished(userId, DELETED_USER_PLACEHOLDER);
+        return new UserDeletedSummary(deleted, anonAssignee, anonCreator);
+    }
+
+    public record UserDeletedSummary(int deleted, int anonAssignee, int anonCreator) {
+    }
+
     /* ============================ getters =========================== */
 
     @Transactional(readOnly = true)
