@@ -130,6 +130,40 @@ public class TaskRepository {
         return jdbcTemplate.update("DELETE FROM task WHERE terrain_id = ?", terrainId);
     }
 
+    /* -------------------------- transitions --------------------------- */
+
+    public void applyTransition(UUID id, String newState, LocalDateTime startedAt,
+                                LocalDateTime finishedAt, Integer realDuration,
+                                String consumedInputsJson) {
+        jdbcTemplate.update("""
+                UPDATE task
+                   SET state                   = ?,
+                       started_at              = COALESCE(?, started_at),
+                       finished_at             = COALESCE(?, finished_at),
+                       real_duration_minutes   = COALESCE(?, real_duration_minutes),
+                       consumed_inputs         = COALESCE(?::jsonb, consumed_inputs),
+                       updated_at              = NOW()
+                 WHERE id = ?
+                """,
+                newState,
+                startedAt == null ? null : Timestamp.valueOf(startedAt),
+                finishedAt == null ? null : Timestamp.valueOf(finishedAt),
+                realDuration,
+                consumedInputsJson,
+                id);
+    }
+
+    public void insertHistory(UUID taskId, String fromState, String toState,
+                               UUID changedBy, LocalDateTime changedAt, String note) {
+        jdbcTemplate.update("""
+                INSERT INTO task_state_history (task_id, from_state, to_state,
+                                                changed_by, changed_at, note)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                taskId, fromState, toState, changedBy,
+                Timestamp.valueOf(changedAt), note);
+    }
+
     /* --------------------- D2 user-deleted policy ---------------------- */
 
     public int deleteByUserIdAndStateIn(UUID userId, Collection<String> states) {
