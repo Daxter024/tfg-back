@@ -1,0 +1,52 @@
+####
+## Compose standalone para input-service.
+##
+## Asume que la red externa `agro-net` ya existe y que `kafka` esta corriendo
+## en ella (lo levanta task-service o el compose raiz).
+##
+## Crear la red si no existe:
+##   docker network create agro-net
+####
+
+services:
+  input-db:
+    image: postgres:14
+    container_name: input-db
+    ports:
+      - "5437:5432"
+    environment:
+      POSTGRES_DB: input_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_input_data:/var/lib/postgresql/data
+    networks:
+      - default
+      - agro-net
+
+  input-service:
+    build: .
+    container_name: input-service
+    ports:
+      - "8085:8085"
+      - "9096:9096"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SERVER_PORT=8085
+      - DB_URL=jdbc:postgresql://input-db:5432/input_db
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - input-db
+    restart: always
+    networks:
+      - default
+      - agro-net
+
+volumes:
+  db_input_data:
+
+networks:
+  agro-net:
+    external: true
