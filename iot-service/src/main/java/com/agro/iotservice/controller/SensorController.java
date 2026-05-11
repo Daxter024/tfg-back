@@ -5,6 +5,7 @@ import com.agro.iotservice.constants.VariableKind;
 import com.agro.iotservice.dto.SensorRequest;
 import com.agro.iotservice.dto.SensorUpdateRequest;
 import com.agro.iotservice.model.Sensor;
+import com.agro.iotservice.service.DeviceKeyService;
 import com.agro.iotservice.service.I18nService;
 import com.agro.iotservice.service.SensorService;
 import jakarta.validation.Valid;
@@ -36,6 +37,7 @@ import java.util.UUID;
 public class SensorController {
 
     private final SensorService sensorService;
+    private final DeviceKeyService deviceKeyService;
     private final I18nService i18n;
 
     @GetMapping
@@ -72,5 +74,21 @@ public class SensorController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         sensorService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Generates a new device API key for {@code id}, deactivating any
+     * previously-active key for that sensor. The plain secret is returned
+     * here once and never persisted — only its BCrypt hash lives in
+     * device_api_key.
+     */
+    @PostMapping("/{id}/api-key")
+    public ResponseEntity<Map<String, Object>> generateApiKey(@PathVariable UUID id) {
+        DeviceKeyService.Generated gen = deviceKeyService.generate(id);
+        return ResponseEntity.status(HttpStatus.CREATED).body(Map.of(
+                "id", gen.id(),
+                "key", gen.secret(),
+                "message", i18n.getMessage("sensor.api-key.generated")
+        ));
     }
 }
