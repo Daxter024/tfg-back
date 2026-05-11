@@ -11,8 +11,8 @@ import java.util.UUID;
  * {@code application.properties} traduce
  * {@code com.agro.taskservice.event.TaskCompletedEvent} a este tipo.
  *
- * <p>Payload SIN parcelId — alineado con el productor actual de task-service
- * (sin sub-divisiones del terreno).</p>
+ * <p>Payload sin sub-divisiones del terreno — alineado con el productor
+ * actual de task-service: solo {@code terrainId} como referencia geografica.</p>
  */
 public record TaskCompletedEvent(
         UUID taskId,
