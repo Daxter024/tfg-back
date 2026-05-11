@@ -11,8 +11,9 @@ import java.util.UUID;
  * consumer (its SensorAlertListener already has the matching type-mapping
  * for {@code com.agro.iotservice.event.SensorAlertEvent}).
  *
- * <p>Payload mirrors plan §7.3 exactly — including {@code terrainId} (NOT
- * parcelId). Decision D5: notifyUserIds is decided here and consumed
+ * <p>Payload mirrors plan §7.3 exactly — including {@code terrainId} as the
+ * scope identifier (no land-subdivision id is used anywhere in this
+ * service). Decision D5: notifyUserIds is decided here and consumed
  * verbatim by the hub.</p>
  */
 public record SensorAlertEvent(
