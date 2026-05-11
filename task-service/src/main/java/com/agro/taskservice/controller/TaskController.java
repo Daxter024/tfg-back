@@ -4,11 +4,13 @@ import com.agro.taskservice.constants.TaskField;
 import com.agro.taskservice.dto.PageResponse;
 import com.agro.taskservice.dto.TaskCalendarSlotDTO;
 import com.agro.taskservice.dto.TaskRequest;
+import com.agro.taskservice.dto.TaskStateTransitionRequest;
 import com.agro.taskservice.dto.TaskSummaryDTO;
 import com.agro.taskservice.dto.TaskUpdateRequest;
 import com.agro.taskservice.repository.TaskRepository;
 import com.agro.taskservice.service.I18nService;
 import com.agro.taskservice.service.TaskService;
+import com.agro.taskservice.service.TaskTransitionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -44,6 +46,7 @@ import java.util.UUID;
 public class TaskController {
 
     private final TaskService taskService;
+    private final TaskTransitionService taskTransitionService;
     private final I18nService i18nService;
 
     /* ============================ writes ============================ */
@@ -71,6 +74,15 @@ public class TaskController {
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         taskService.deleteTask(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/transition")
+    public ResponseEntity<Map<String, String>> transition(
+            @PathVariable UUID id,
+            @Valid @RequestBody TaskStateTransitionRequest request,
+            @RequestHeader(value = "X-User-Id") UUID actorId) {
+        taskTransitionService.transition(id, request, actorId);
+        return ResponseEntity.ok(Map.of("message", i18nService.getMessage("task.updated")));
     }
 
     /* ============================ reads ============================= */

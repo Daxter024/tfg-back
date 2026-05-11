@@ -9,6 +9,7 @@ import com.agro.taskservice.exception.TerrainNotFoundException;
 import com.agro.taskservice.repository.TaskRepository;
 import com.agro.taskservice.service.I18nService;
 import com.agro.taskservice.service.TaskService;
+import com.agro.taskservice.service.TaskTransitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,12 +38,14 @@ class TaskControllerTest {
 
     MockMvc mockMvc;
     TaskService taskService;
+    TaskTransitionService taskTransitionService;
     I18nService i18nService;
     ObjectMapper objectMapper;
 
     @BeforeEach
     void setup() {
         taskService = Mockito.mock(TaskService.class);
+        taskTransitionService = Mockito.mock(TaskTransitionService.class);
         i18nService = Mockito.mock(I18nService.class);
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
@@ -50,7 +53,7 @@ class TaskControllerTest {
         when(i18nService.getMessage(anyString(), any(Object[].class)))
                 .thenAnswer(inv -> inv.getArgument(0));
 
-        TaskController controller = new TaskController(taskService, i18nService);
+        TaskController controller = new TaskController(taskService, taskTransitionService, i18nService);
         GlobalExceptionHandler advice = new GlobalExceptionHandler(i18nService);
 
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
