@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -82,7 +83,8 @@ class TaskServiceTest {
 
         when(taskRepository.findTypeByCode("IRRIGATION"))
                 .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "task.type.irrigation")));
-        when(terrainGrpcClient.checkTerrainExists(req.terrain_id())).thenReturn(true);
+        when(terrainGrpcClient.checkTerrainOwnership(eq(req.terrain_id()), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(true, true));
         when(userGrpcClient.validateUser(any(UUID.class))).thenReturn(true);
         when(taskRepository.insert(any(Task.class))).thenReturn(generated);
 
@@ -107,7 +109,8 @@ class TaskServiceTest {
         TaskRequest req = baseRequest();
         when(taskRepository.findTypeByCode("IRRIGATION"))
                 .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "")));
-        when(terrainGrpcClient.checkTerrainExists(req.terrain_id())).thenReturn(false);
+        when(terrainGrpcClient.checkTerrainOwnership(eq(req.terrain_id()), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(false, false));
 
         assertThatThrownBy(() -> service.createTask(req, UUID.randomUUID()))
                 .isInstanceOf(TerrainNotFoundException.class);
@@ -118,7 +121,8 @@ class TaskServiceTest {
         TaskRequest req = baseRequest();
         when(taskRepository.findTypeByCode("IRRIGATION"))
                 .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "")));
-        when(terrainGrpcClient.checkTerrainExists(req.terrain_id())).thenReturn(true);
+        when(terrainGrpcClient.checkTerrainOwnership(eq(req.terrain_id()), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(true, true));
         // creator validates, assignee doesn't
         when(userGrpcClient.validateUser(any(UUID.class))).thenReturn(true).thenReturn(false);
 
@@ -137,7 +141,8 @@ class TaskServiceTest {
 
         when(taskRepository.findTypeByCode("IRRIGATION"))
                 .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "")));
-        when(terrainGrpcClient.checkTerrainExists(any(UUID.class))).thenReturn(true);
+        when(terrainGrpcClient.checkTerrainOwnership(any(UUID.class), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(true, true));
         when(userGrpcClient.validateUser(any(UUID.class))).thenReturn(true);
         when(taskRepository.insert(any(Task.class))).thenReturn(UUID.randomUUID());
 
@@ -155,7 +160,8 @@ class TaskServiceTest {
 
         when(taskRepository.findTypeByCode("IRRIGATION"))
                 .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "")));
-        when(terrainGrpcClient.checkTerrainExists(any(UUID.class))).thenReturn(true);
+        when(terrainGrpcClient.checkTerrainOwnership(any(UUID.class), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(true, true));
         when(userGrpcClient.validateUser(any(UUID.class))).thenReturn(true);
         when(taskRepository.insert(any(Task.class))).thenReturn(UUID.randomUUID());
 
@@ -214,6 +220,52 @@ class TaskServiceTest {
         LocalDateTime to = from.plusDays(30);
         when(taskRepository.findCalendar(any(), any(), any())).thenReturn(List.of());
         assertThat(service.calendar(from, to, null)).isEmpty();
+    }
+
+    // -------------------- §27 ownership (D27 — TASK-27.NN) --------------------
+
+    @Test
+    void createTask_terrainNotOwned_throwsForbidden() {
+        // TASK-27.02: terrain existe pero NO pertenece al user → 403
+        TaskRequest req = baseRequest();
+        when(taskRepository.findTypeByCode("IRRIGATION"))
+                .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "")));
+        when(terrainGrpcClient.checkTerrainOwnership(eq(req.terrain_id()), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(true, false));
+
+        assertThatThrownBy(() -> service.createTask(req, UUID.randomUUID()))
+                .isInstanceOf(com.agro.taskservice.exception.ForbiddenException.class);
+        verify(taskRepository, never()).insert(any());
+    }
+
+    @Test
+    void createTask_terrainOwned_inserts() {
+        // TASK-27.03: terrain existe Y pertenece al user → 201
+        TaskRequest req = baseRequest();
+        UUID generated = UUID.randomUUID();
+        when(taskRepository.findTypeByCode("IRRIGATION"))
+                .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "")));
+        when(terrainGrpcClient.checkTerrainOwnership(eq(req.terrain_id()), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(true, true));
+        when(userGrpcClient.validateUser(any(UUID.class))).thenReturn(true);
+        when(taskRepository.insert(any(Task.class))).thenReturn(generated);
+
+        assertThat(service.createTask(req, UUID.randomUUID())).isEqualTo(generated);
+        verify(taskRepository).insert(any(Task.class));
+    }
+
+    @Test
+    void createTask_terrainGhost_throwsNotFoundBeforeForbidden() {
+        // TASK-27.04: terrain inexistente → 404, no se llega a comprobar propiedad
+        TaskRequest req = baseRequest();
+        when(taskRepository.findTypeByCode("IRRIGATION"))
+                .thenReturn(Optional.of(new TaskType(2, "IRRIGATION", "")));
+        when(terrainGrpcClient.checkTerrainOwnership(eq(req.terrain_id()), any(UUID.class)))
+                .thenReturn(new TerrainGrpcClient.Ownership(false, false));
+
+        assertThatThrownBy(() -> service.createTask(req, UUID.randomUUID()))
+                .isInstanceOf(TerrainNotFoundException.class);
+        verify(taskRepository, never()).insert(any());
     }
 
     private Task buildTask(UUID id, TaskState state) {
