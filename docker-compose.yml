@@ -11,12 +11,14 @@ services:
       - SEASON_SERVICE_URL=http://season-service:8082
       - AUTH_SERVICE_URL=http://auth-service:8083
       - TASK_SERVICE_URL=http://task-service:8084
+      - INPUT_SERVICE_URL=http://input-service:8085
     depends_on:
       - terrain-service
       - crop-service
       - season-service
       - auth-service
       - task-service
+      - input-service
 
   kafka:
     # bitnami/kafka images stopped being publicly hosted in 2025 — switched to

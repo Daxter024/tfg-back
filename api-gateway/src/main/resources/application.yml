@@ -102,6 +102,19 @@ spring:
                 name: notificationService
                 fallbackUri: forward:/fallback/task
                 statusCodes: 500,502,503,504,505
+
+        - id: input-service
+          uri: ${INPUT_SERVICE_URL:http://localhost:8085}
+          predicates:
+            - Path=/api/input/**
+          filters:
+            - StripPrefix=1
+            - JwtValidation
+            - name: CircuitBreaker
+              args:
+                name: inputService
+                fallbackUri: forward:/fallback/input
+                statusCodes: 500,502,503,504,505
 # For newer versions
 #  cloud:
 #    gateway:
