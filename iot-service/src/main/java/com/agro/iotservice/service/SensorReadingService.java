@@ -5,7 +5,6 @@ import com.agro.iotservice.repository.SensorReadingRepository;
 import com.agro.iotservice.repository.SensorRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,8 +28,13 @@ public class SensorReadingService {
     private final SensorReadingRepository readingRepo;
     private final SensorRepository sensorRepo;
 
-    /** Optional bridge. Set by commit 5 (AlertEvaluator). Null = no-op. */
-    @Autowired(required = false)
+    /**
+     * Optional bridge wired by {@link AlertService} via {@link #setAlertEvaluator}
+     * inside its own {@code @PostConstruct}. Stays null until then; the
+     * persist path treats null as "no evaluation". This indirection breaks
+     * what would otherwise be a circular constructor injection (Spring Boot
+     * 3.x rejects circular refs by default).
+     */
     private AlertEvaluator alertEvaluator;
 
     /**
