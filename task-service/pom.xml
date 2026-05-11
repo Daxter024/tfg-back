@@ -80,21 +80,11 @@
             <artifactId>grpc-client-spring-boot-starter</artifactId>
             <version>3.1.0.RELEASE</version>
         </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-protobuf</artifactId>
-            <version>1.65.1</version>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-stub</artifactId>
-            <version>1.65.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>3.25.5</version>
-        </dependency>
+        <!-- grpc-protobuf, grpc-stub y protobuf-java vienen transitivamente
+             del starter grpc-client-spring-boot-starter:3.1.0.RELEASE
+             (alineadas a grpc-core 1.63.0; mismo patron que terrain-service).
+             Declararlas a 1.65.1 rompe el classpath:
+             ClassNotFoundException: io.grpc.InternalGlobalInterceptors. -->
         <dependency>
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
