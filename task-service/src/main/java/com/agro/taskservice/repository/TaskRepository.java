@@ -221,6 +221,32 @@ public class TaskRepository {
 
     /* ----------------------------- export ----------------------------- */
 
+    /* ----------------------- scheduler queries ----------------------- */
+
+    /** Tareas PENDING que entran en ventana de upcoming
+     *  ({@code planned_at - lead <= now < planned_at}). */
+    public List<Map<String, Object>> findUpcomingCandidates(LocalDateTime now) {
+        return jdbcTemplate.queryForList("""
+                SELECT t.id, tt.code AS task_type_code, t.terrain_id, t.planned_at,
+                       t.assigned_to, t.created_by
+                  FROM task t LEFT JOIN task_type tt ON tt.id = t.task_type_id
+                 WHERE t.state = 'PENDING'
+                   AND t.planned_at >= ?
+                """, Timestamp.valueOf(now));
+    }
+
+    /** Tareas en estado PENDING/IN_PROGRESS cuya planned_at + duration esta en
+     *  el pasado. */
+    public List<Map<String, Object>> findOverdueCandidates(LocalDateTime now) {
+        return jdbcTemplate.queryForList("""
+                SELECT t.id, tt.code AS task_type_code, t.terrain_id, t.planned_at,
+                       t.assigned_to, t.created_by
+                  FROM task t LEFT JOIN task_type tt ON tt.id = t.task_type_id
+                 WHERE t.state IN ('PENDING','IN_PROGRESS')
+                   AND (t.planned_at + (t.estimated_duration_minutes || ' minutes')::interval) < ?
+                """, Timestamp.valueOf(now));
+    }
+
     /** Stream de filas para exportar a CSV. Reusa los filtros del listado. */
     public void streamForExport(TaskFilters f, org.springframework.jdbc.core.RowCallbackHandler handler) {
         String base = """
