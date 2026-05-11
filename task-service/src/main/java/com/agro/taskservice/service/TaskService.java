@@ -10,6 +10,7 @@ import com.agro.taskservice.dto.TaskCalendarSlotDTO;
 import com.agro.taskservice.dto.TaskRequest;
 import com.agro.taskservice.dto.TaskSummaryDTO;
 import com.agro.taskservice.dto.TaskUpdateRequest;
+import com.agro.taskservice.exception.ForbiddenException;
 import com.agro.taskservice.exception.InvalidFieldException;
 import com.agro.taskservice.exception.RecurrenceExceededException;
 import com.agro.taskservice.exception.TaskDeleteConflictException;
@@ -66,9 +67,16 @@ public class TaskService {
                 .orElseThrow(() -> new InvalidFieldException(
                         i18nService.getMessage("task.type.unknown", request.task_type_code())));
 
-        if (!terrainGrpcClient.checkTerrainExists(request.terrain_id())) {
+        // Ownership: el terreno debe existir Y pertenecer a quien crea la tarea.
+        TerrainGrpcClient.Ownership ownership =
+                terrainGrpcClient.checkTerrainOwnership(request.terrain_id(), createdBy);
+        if (!ownership.exists()) {
             throw new TerrainNotFoundException(
                     i18nService.getMessage("task.terrain.not.found", request.terrain_id()));
+        }
+        if (!ownership.ownedByUser()) {
+            throw new ForbiddenException(
+                    i18nService.getMessage("terrain.not.owned", request.terrain_id()));
         }
         validateUserExists(createdBy);
         validateUserExists(request.assigned_to());

@@ -6,7 +6,8 @@ option java_multiple_files = true;
 option java_package = "com.agro.terrain.grpc";
 
 service TerrainService {
-  rpc CheckTerrainExists (TerrainIdRequest) returns (TerrainExistsResponse);
+  rpc CheckTerrainExists    (TerrainIdRequest)        returns (TerrainExistsResponse);
+  rpc CheckTerrainOwnership (TerrainOwnershipRequest) returns (TerrainOwnershipResponse);
 }
 
 message TerrainIdRequest {
@@ -15,4 +16,14 @@ message TerrainIdRequest {
 
 message TerrainExistsResponse {
   bool exists = 1;
+}
+
+message TerrainOwnershipRequest {
+  string terrain_id = 1;
+  string user_id    = 2;
+}
+
+message TerrainOwnershipResponse {
+  bool exists        = 1;  // existe el terreno en BBDD
+  bool owned_by_user = 2;  // exists && terrain.user_id == request.user_id
 }

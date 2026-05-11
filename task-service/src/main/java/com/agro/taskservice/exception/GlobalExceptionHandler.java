@@ -58,6 +58,11 @@ public class GlobalExceptionHandler {
         return problem(HttpStatus.CONFLICT, "task.delete.conflict.title", ex.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ProblemDetail> handleForbidden(ForbiddenException ex) {
+        return problem(HttpStatus.FORBIDDEN, "task.forbidden.title", ex.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ProblemDetail> handleValidation(MethodArgumentNotValidException ex) {
         List<String> errors = ex.getBindingResult().getFieldErrors().stream()
