@@ -11,9 +11,10 @@ import java.util.UUID;
  * {@code FINISHED}. Consumido por input-service (HU-INS-02) y por la futura
  * extension de season-service (HU-CUL-02) para crear treatments.
  *
- * <p>Sin {@code parcelId} — main no tiene parcels. Si en el futuro se
- * reintroduce el concepto, se anade el campo sin breaking change (los
- * consumidores son tolerantes a campos extras).</p>
+ * <p>El payload incluye {@code terrainId} pero ninguna sub-division
+ * geografica del terreno. Si en el futuro se introducen sub-divisiones, se
+ * anade el campo sin breaking change (los consumidores son tolerantes a
+ * campos extras).</p>
  */
 public record TaskCompletedEvent(
         UUID taskId,
