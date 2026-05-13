@@ -12,6 +12,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
@@ -77,8 +78,7 @@ public class JwtValidationGatewayFilterFactory extends AbstractGatewayFilterFact
                     .flatMap(resp -> {
                         Claims claims = parseClaims(token.substring(7));
                         if (claims == null) {
-                            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                            return exchange.getResponse().setComplete();
+                            return reject(exchange, HttpStatus.UNAUTHORIZED);
                         }
                         ServerHttpRequest mutated = request.mutate()
                                 .headers(h -> {
@@ -89,8 +89,36 @@ public class JwtValidationGatewayFilterFactory extends AbstractGatewayFilterFact
                                 })
                                 .build();
                         return chain.filter(exchange.mutate().request(mutated).build());
+                    })
+                    // auth-service responde 4xx (JWT mal-formado / expirado / revocado)
+                    // → 401 al cliente, NO 500.
+                    .onErrorResume(WebClientResponseException.class, ex -> {
+                        if (ex.getStatusCode().is4xxClientError()) {
+                            log.debug("JWT rechazado por auth-service ({}): {}",
+                                    ex.getStatusCode().value(), ex.getMessage());
+                            return reject(exchange, HttpStatus.UNAUTHORIZED);
+                        }
+                        // 5xx de auth-service → cliente debe saber que es indisponibilidad
+                        // del autenticador, no que su token sea malo. 502 BAD_GATEWAY
+                        // alinea con el comportamiento típico de reverse proxies.
+                        log.warn("auth-service /validate devolvió {}: {}",
+                                ex.getStatusCode().value(), ex.getMessage());
+                        return reject(exchange, HttpStatus.BAD_GATEWAY);
+                    })
+                    // Cualquier otro error (timeout, connection refused, DNS) → auth
+                    // unreachable → 502.
+                    .onErrorResume(ex -> {
+                        log.warn("auth-service /validate inalcanzable: {}", ex.getMessage());
+                        return reject(exchange, HttpStatus.BAD_GATEWAY);
                     });
         };
+    }
+
+    /** Cierra la response con el status indicado, sin cuerpo. */
+    private Mono<Void> reject(org.springframework.web.server.ServerWebExchange exchange,
+                               HttpStatus status) {
+        exchange.getResponse().setStatusCode(status);
+        return exchange.getResponse().setComplete();
     }
 
     /**
